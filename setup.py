@@ -1,5 +1,5 @@
 """
-pdbp (Pdb+) --- This fixes pdbpp (Pdb++) to work in all environments.
+pdbp (Pdb+) --- Expanding pdb and fixing pdbpp.
 """
 
 from setuptools import setup, find_packages  # noqa
@@ -20,7 +20,7 @@ try:
             long_description_lines.append(line)
     long_description = "\n".join(long_description_lines)
 except IOError:
-    long_description = "pdbp (Pdb+) -- Improving pdb and fixing pdbpp (Pdb++)."
+    long_description = "pdbp (Pdb+) --- Expanding pdb and fixing pdbpp."
 
 if sys.argv[-1] == "publish":
     reply = None
@@ -58,8 +58,8 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="0.1.0",
-    description="pdbp (Pdb+) -- Improving pdb and fixing pdbpp (Pdb++).",
+    version="0.2.0",
+    description="pdbp (Pdb+) --- Expanding pdb and fixing pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="pdb debugger tab color completion",
@@ -111,7 +111,7 @@ setup(
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
         'pygments>=2.13.0;python_version>="3.6"',
-        "tabcompleter>=0.1.0",
+        "tabcompleter>=0.2.0",
         "six>=1.16.0",
     ],
     setup_requires=["setuptools_scm"],
