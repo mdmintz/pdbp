@@ -267,7 +267,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 self.curindex = i
                 break
         else:
-            self.curindex = len(self.stack)-1
+            self.curindex = len(self.stack) - 1
             self.curframe = self.stack[-1][0]
             self.print_current_stack_entry()
 
@@ -404,7 +404,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
         if (
             cmd
-            and hasattr(self, "do_"+cmd)
+            and hasattr(self, "do_" + cmd)
             and (
                 cmd in self.curframe.f_globals
                 or cmd in self.curframe.f_locals
@@ -713,7 +713,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                       file=self.stdout)
                 return
             self.sticky = True
-            self.sticky_ranges[self.curframe] = start, end+1
+            self.sticky_ranges[self.curframe] = start, end + 1
         else:
             self.sticky = not self.sticky
             self.sticky_range = None
@@ -848,7 +848,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 import termios
                 import fcntl
                 import struct
-                call = fcntl.ioctl(0, termios.TIOCGWINSZ, "\x00"*8)
+                call = fcntl.ioctl(0, termios.TIOCGWINSZ, "\x00" * 8)
                 height, width = struct.unpack("hhhh", call)[:2]
             except (SystemExit, KeyboardInterrupt):
                 raise
