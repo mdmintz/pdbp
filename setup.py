@@ -60,7 +60,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="0.2.1",
+    version="1.0.0",
     description="pdbp (Pdb+) --- Expanding pdb and improving pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -113,7 +113,7 @@ setup(
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
         'pygments>=2.13.0;python_version>="3.6"',
-        "tabcompleter>=0.2.1",
+        "tabcompleter>=1.0.0",
         "six>=1.16.0",
     ],
     setup_requires=[],
