@@ -502,18 +502,18 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if linerange:
             start, end = linerange
             start = max(start, lineno)
-            end = min(end, lineno+len(lines))
-            lines = lines[start-lineno:end-lineno]
+            end = min(end, lineno + len(lines))
+            lines = lines[start - lineno:end - lineno]
             lineno = start
         self._print_lines_pdbp(lines, lineno)
 
     def _print_lines_pdbp(self, lines, lineno, print_markers=True):
         offset = 0
         try:
-            max_line = int(lineno) + len(lines)
+            max_line = int(lineno) + len(lines) - 1
             if max_line > 9999:
                 offset = 1
-            elif max_line > 99999:
+            if max_line > 99999:
                 offset = 2
         except Exception:
             pass
