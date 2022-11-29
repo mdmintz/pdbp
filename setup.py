@@ -1,5 +1,7 @@
 """
-pdbp (Pdb+) --- Expanding pdb and fixing pdbpp.
+*** pdbp (Pdb+) ***
+A Python console debugger that expands on pdb and improves pdbpp.
+(Python 2.7+ and Python 3.6+)
 """
 
 from setuptools import setup, find_packages  # noqa
@@ -20,7 +22,7 @@ try:
             long_description_lines.append(line)
     long_description = "\n".join(long_description_lines)
 except IOError:
-    long_description = "pdbp (Pdb+) --- Expanding pdb and fixing pdbpp."
+    long_description = "pdbp (Pdb+) --- Expanding pdb and improving pdbpp."
 
 if sys.argv[-1] == "publish":
     reply = None
@@ -58,8 +60,8 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="0.2.0",
-    description="pdbp (Pdb+) --- Expanding pdb and fixing pdbpp.",
+    version="0.2.1",
+    description="pdbp (Pdb+) --- Expanding pdb and improving pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="pdb debugger tab color completion",
@@ -111,10 +113,10 @@ setup(
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
         'pygments>=2.13.0;python_version>="3.6"',
-        "tabcompleter>=0.2.0",
+        "tabcompleter>=0.2.1",
         "six>=1.16.0",
     ],
-    setup_requires=["setuptools_scm"],
+    setup_requires=[],
     include_package_data=True,
 )
 
