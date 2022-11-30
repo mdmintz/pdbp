@@ -1,6 +1,6 @@
 """
 *** pdbp (Pdb+) ***
-A Python console debugger that expands on pdb and improves pdbpp.
+A Python console debugger that expands pdb functionality while improving pdbpp.
 (Python 2.7+ and Python 3.6+)
 """
 
@@ -22,7 +22,7 @@ try:
             long_description_lines.append(line)
     long_description = "\n".join(long_description_lines)
 except IOError:
-    long_description = "pdbp (Pdb+) --- Expanding pdb and improving pdbpp."
+    long_description = "pdbp (Pdb+) --- Expanding pdb while improving pdbpp."
 
 if sys.argv[-1] == "publish":
     reply = None
@@ -61,7 +61,7 @@ if sys.argv[-1] == "publish":
 setup(
     name="pdbp",
     version="1.0.0",
-    description="pdbp (Pdb+) --- Expanding pdb and improving pdbpp.",
+    description="pdbp (Pdb+) --- Expanding pdb while improving pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="pdb debugger tab color completion",
