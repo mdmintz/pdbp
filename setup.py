@@ -60,7 +60,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.0.0",
+    version="1.1.0",
     description="pdbp (Pdb+) --- Expanding pdb while improving pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",

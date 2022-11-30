@@ -60,6 +60,53 @@ def rebind_globals(func, newglobals):
     return newfunc
 
 
+def is_char_wide(char):
+    # Returns True if the char is Chinese, Japanese, Korean, or another double.
+    if sys.version_info < (3, ):
+        return False  # Python 2.7 can't handle that
+    special_c_r = [
+        {"from": ord("\u4e00"), "to": ord("\u9FFF")},
+        {"from": ord("\u3040"), "to": ord("\u30ff")},
+        {"from": ord("\uac00"), "to": ord("\ud7a3")},
+        {"from": ord("\uff01"), "to": ord("\uff60")},
+    ]
+    sc = any(
+        [range["from"] <= ord(char) <= range["to"] for range in special_c_r]
+    )
+    return sc
+
+
+def get_width(line):
+    # Return the true width of the line. Not the same as line length.
+    # Chinese/Japanese/Korean characters take up two spaces of width.
+    line_length = len(line)
+    for char in line:
+        if is_char_wide(char):
+            line_length += 1
+    return line_length
+
+
+def set_line_width(line, width):
+    """Trim line if too long. Fill line if too short. Return line."""
+    line_width = get_width(line)
+    new_line = ""
+    width = int(width)
+    if width <= 0:
+        return new_line
+    elif line_width == width:
+        return line
+    elif line_width < width:
+        new_line = line
+    else:
+        for char in line:
+            updated_line = "%s%s" % (new_line, char)
+            if get_width(updated_line) > width:
+                break
+            new_line = updated_line
+    extra_spaces = " " * (width - get_width(new_line))
+    return "%s%s" % (new_line, extra_spaces)
+
+
 class DefaultConfig(object):
     prompt = "(Pdb+) "
     highlight = True
@@ -143,6 +190,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.display_list = {}  # frame --> (name --> last seen value)
         self.sticky = self.config.sticky_by_default
         self.first_time_sticky = self.sticky
+        self.ok_to_clear = False
         self.sticky_ranges = {}  # frame --> (start, end)
         self.tb_lineno = {}  # frame --> lineno where the exception raised
         self.history = []
@@ -189,8 +237,10 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             return
         if self.config.exec_if_unfocused:
             pass  # Removed! Hopefully not needed!
-        self.print_stack_entry(self.stack[self.curindex])
-        self.print_hidden_frames_count()
+        if traceback:
+            self.print_stack_entry(self.stack[self.curindex])
+            self.print_hidden_frames_count()
+            print(file=self.stdout)
         completer = tabcompleter.setup()
         completer.config.readline.set_completer(self.complete)
         self.config.before_interaction_hook(self)
@@ -484,7 +534,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.lastcmd = "longlist"
         self._printlonglist()
 
-    def _printlonglist(self, linerange=None):
+    def _printlonglist(self, linerange=None, fnln=None):
         try:
             if self.curframe.f_code.co_name == "<module>":
                 lines, _ = inspect.findsource(self.curframe)
@@ -505,16 +555,19 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             end = min(end, lineno + len(lines))
             lines = lines[start - lineno:end - lineno]
             lineno = start
-        self._print_lines_pdbp(lines, lineno)
+        self._print_lines_pdbp(lines, lineno, fnln=fnln)
 
-    def _print_lines_pdbp(self, lines, lineno, print_markers=True):
+    def _print_lines_pdbp(self, lines, lineno, print_markers=True, fnln=None):
+        dots = "...."
         offset = 0
         try:
             max_line = int(lineno) + len(lines) - 1
             if max_line > 9999:
                 offset = 1
+                dots = "....."
             if max_line > 99999:
                 offset = 2
+                dots = "......"
         except Exception:
             pass
         exc_lineno = self.tb_lineno.get(self.curframe, None)
@@ -523,21 +576,23 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                  for line in lines]  # force tabs to 4 spaces
         width, height = self.get_terminal_size()
         width = width - offset
+        height = height - 1
         if self.config.truncate_long_lines:
             maxlength = max(width - 9, 16)
-            lines = [line[:maxlength] for line in lines]
+            lines = [set_line_width(line, maxlength) for line in lines]
         else:
             maxlength = max(map(len, lines))
         if self.config.highlight:
             # Fill with spaces.  This is important when a bg color is used,
             # e.g. for highlighting the current line (via setbgcolor).
-            lines = [line.ljust(maxlength) for line in lines]
+            lines = [set_line_width(line, maxlength) for line in lines]
             src = self.format_source("\n".join(lines))
             lines = src.splitlines()
         if height >= 6:
             last_marker_line = max(
                 self.curframe.f_lineno,
-                exc_lineno if exc_lineno else 0) - lineno
+                exc_lineno if exc_lineno else 0
+            ) - lineno
             if last_marker_line >= 0:
                 maxlines = last_marker_line + height * 2 // 3
                 if len(lines) > maxlines:
@@ -551,7 +606,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 marker = ">>"
             lines[i] = self.format_line(lineno, marker, line)
             lineno += 1
-        print("\n".join(lines), file=self.stdout)
+        if self.ok_to_clear:
+            self.stdout.write(CLEARSCREEN)
+        if fnln:
+            print(fnln, file=self.stdout)
+            if int(lineno) > 0:
+                print(dots, file=self.stdout)
+            else:
+                print(file=self.stdout)
+        print("\n".join(lines), file=self.stdout, end="\n\n\033[F")
 
     do_ll = do_longlist
 
@@ -652,14 +715,12 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             if self.first_time_sticky:
                 self.first_time_sticky = False
             else:
-                self.stdout.write(CLEARSCREEN)
+                self.ok_to_clear = True
             frame, lineno = self.stack[self.curindex]
             filename = self.canonic(frame.f_code.co_filename)
-            s = "> %s(%r)" % (filename, lineno)
-            print(s, file=self.stdout)
-            print(file=self.stdout)
+            fnln = "> %s(%r)" % (filename, lineno)
             sticky_range = self.sticky_ranges.get(self.curframe, None)
-            self._printlonglist(sticky_range)
+            self._printlonglist(sticky_range, fnln=fnln)
             if "__exception__" in frame.f_locals:
                 s = self._format_exc_for_sticky(
                     frame.f_locals["__exception__"]
