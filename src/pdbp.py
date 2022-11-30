@@ -117,7 +117,7 @@ class DefaultConfig(object):
     use_terminal256formatter = None  # Defaults to `"256color" in $TERM`.
     editor = "${EDITOR:-vi}"  # Use $EDITOR if set; else default to vi.
     stdin_paste = None
-    exec_if_unfocused = None  # (This option was removed!)
+    exec_if_unfocused = None  # This option was removed!
     truncate_long_lines = True
     disable_pytest_capturing = True
     enable_hidden_frames = False
@@ -191,6 +191,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.sticky = self.config.sticky_by_default
         self.first_time_sticky = self.sticky
         self.ok_to_clear = False
+        self.has_traceback = False
         self.sticky_ranges = {}  # frame --> (start, end)
         self.tb_lineno = {}  # frame --> lineno where the exception raised
         self.history = []
@@ -223,7 +224,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             pass
 
     def interaction(self, frame, traceback):
-        # Restore the previous signal handler at the Pdb prompt.
+        # Restore the previous signal handler at the Pdb+ prompt.
         if getattr(pdb.Pdb, "_previous_sigint_handler", None):
             try:
                 signal.signal(signal.SIGINT, pdb.Pdb._previous_sigint_handler)
@@ -236,15 +237,21 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self.forget()
             return
         if self.config.exec_if_unfocused:
-            pass  # Removed! Hopefully not needed!
-        if traceback:
+            pass  # This option was removed!
+        if traceback or not self.sticky or self.first_time_sticky:
+            self.has_traceback = True
+            if not self.sticky:
+                print(file=self.stdout)
             self.print_stack_entry(self.stack[self.curindex])
             self.print_hidden_frames_count()
-            print(file=self.stdout)
+            if self.sticky:
+                print(file=self.stdout)
+            else:
+                print(file=self.stdout, end="\n\033[F")
         completer = tabcompleter.setup()
         completer.config.readline.set_completer(self.complete)
         self.config.before_interaction_hook(self)
-        # Use _cmdloop on py3 which catches KeyboardInterrupt.
+        # Use _cmdloop on Python3, which catches KeyboardInterrupt.
         if hasattr(self, "_cmdloop"):
             self._cmdloop()
         else:
@@ -256,7 +263,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if n and self.config.show_hidden_frames_count:
             plural = n > 1 and "s" or ""
             print(
-                "   %d frame%s hidden (try 'help hidden_frames')"
+                '   %d frame%s hidden (Use "u" and "d" to travel)'
                 % (n, plural),
                 file=self.stdout,
             )
@@ -277,7 +284,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         consts = frame.f_code.co_consts
         if consts and consts[-1] is _HIDE_FRAME:
             return True
-        # Do not hide if this frame contains the initial set_trace.
+        # Don't hide if this frame contains the initial set_trace.
         if frame is getattr(self, "_via_set_trace_frame", None):
             return False
         if frame.f_globals.get("__unittest"):
@@ -340,7 +347,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         return r
 
     def complete(self, text, state):
-        """Handle completions from tabcompleter and original pdb."""
+        """Handle completions from tabcompleter and the original pdb."""
         if state == 0:
             if GLOBAL_PDB:
                 GLOBAL_PDB._pdbp_completing = True
@@ -583,8 +590,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             maxlength = max(map(len, lines))
         if self.config.highlight:
-            # Fill with spaces.  This is important when a bg color is used,
-            # e.g. for highlighting the current line (via setbgcolor).
+            # Fill line with spaces. This is important when a bg color is
+            # is used for highlighting the current line (via setbgcolor).
             lines = [set_line_width(line, maxlength) for line in lines]
             src = self.format_source("\n".join(lines))
             lines = src.splitlines()
@@ -610,7 +617,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self.stdout.write(CLEARSCREEN)
         if fnln:
             print(fnln, file=self.stdout)
-            if int(lineno) > 0:
+            if int(lineno) > 1:
                 print(dots, file=self.stdout)
             else:
                 print(file=self.stdout)
@@ -778,7 +785,12 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             self.sticky = not self.sticky
             self.sticky_range = None
-        self._print_if_sticky()
+        if self.sticky:
+            self._print_if_sticky()
+        else:
+            print(file=self.stdout)
+            self.print_stack_entry(self.stack[self.curindex])
+            print(file=self.stdout, end="\n\033[F")
 
     def print_stack_trace(self):
         try:
@@ -805,7 +817,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if self.sticky:
             self._print_if_sticky()
         else:
+            print(file=self.stdout)
             self.print_stack_entry(self.stack[self.curindex])
+            print(file=self.stdout, end="\n\033[F")
 
     def preloop(self):
         self._print_if_sticky()
@@ -1019,16 +1033,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             tb = tb.tb_next
             if tb and tb.tb_frame.f_code.co_filename == "<stdin>":
                 tb = tb.tb_next
-                if tb:  # Only display with actual traceback.
+                if tb:
                     self._remove_bdb_context(evalue)
                     tb_limit = self.config.show_traceback_on_error_limit
                     fmt_exc = traceback.format_exception(
                         etype, evalue, tb, limit=tb_limit
                     )
-                    # Remove last line (exception string again).
+                    # Remove the last line (exception string again).
                     if len(fmt_exc) > 1 and fmt_exc[-1][0] != " ":
                         fmt_exc.pop()
-
                     print("".join(fmt_exc).rstrip(), file=self.stdout)
 
     @staticmethod
