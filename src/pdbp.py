@@ -60,6 +60,53 @@ def rebind_globals(func, newglobals):
     return newfunc
 
 
+def is_char_wide(char):
+    # Returns True if the char is Chinese, Japanese, Korean, or another double.
+    if sys.version_info < (3, ):
+        return False  # Python 2.7 can't handle that
+    special_c_r = [
+        {"from": ord("\u4e00"), "to": ord("\u9FFF")},
+        {"from": ord("\u3040"), "to": ord("\u30ff")},
+        {"from": ord("\uac00"), "to": ord("\ud7a3")},
+        {"from": ord("\uff01"), "to": ord("\uff60")},
+    ]
+    sc = any(
+        [range["from"] <= ord(char) <= range["to"] for range in special_c_r]
+    )
+    return sc
+
+
+def get_width(line):
+    # Return the true width of the line. Not the same as line length.
+    # Chinese/Japanese/Korean characters take up two spaces of width.
+    line_length = len(line)
+    for char in line:
+        if is_char_wide(char):
+            line_length += 1
+    return line_length
+
+
+def set_line_width(line, width):
+    """Trim line if too long. Fill line if too short. Return line."""
+    line_width = get_width(line)
+    new_line = ""
+    width = int(width)
+    if width <= 0:
+        return new_line
+    elif line_width == width:
+        return line
+    elif line_width < width:
+        new_line = line
+    else:
+        for char in line:
+            updated_line = "%s%s" % (new_line, char)
+            if get_width(updated_line) > width:
+                break
+            new_line = updated_line
+    extra_spaces = " " * (width - get_width(new_line))
+    return "%s%s" % (new_line, extra_spaces)
+
+
 class DefaultConfig(object):
     prompt = "(Pdb+) "
     highlight = True
@@ -525,19 +572,20 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         width = width - offset
         if self.config.truncate_long_lines:
             maxlength = max(width - 9, 16)
-            lines = [line[:maxlength] for line in lines]
+            lines = [set_line_width(line, maxlength) for line in lines]
         else:
             maxlength = max(map(len, lines))
         if self.config.highlight:
             # Fill with spaces.  This is important when a bg color is used,
             # e.g. for highlighting the current line (via setbgcolor).
-            lines = [line.ljust(maxlength) for line in lines]
+            lines = [set_line_width(line, maxlength) for line in lines]
             src = self.format_source("\n".join(lines))
             lines = src.splitlines()
         if height >= 6:
             last_marker_line = max(
                 self.curframe.f_lineno,
-                exc_lineno if exc_lineno else 0) - lineno
+                exc_lineno if exc_lineno else 0
+            ) - lineno
             if last_marker_line >= 0:
                 maxlines = last_marker_line + height * 2 // 3
                 if len(lines) > maxlines:
