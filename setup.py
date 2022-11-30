@@ -61,8 +61,8 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.1.0",
-    description="pdbp (Pdb+) --- Expanding pdb while improving pdbpp.",
+    version="1.2.0",
+    description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="pdb debugger tab color completion",
