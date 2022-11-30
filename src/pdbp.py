@@ -190,6 +190,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.display_list = {}  # frame --> (name --> last seen value)
         self.sticky = self.config.sticky_by_default
         self.first_time_sticky = self.sticky
+        self.ok_to_clear = False
         self.sticky_ranges = {}  # frame --> (start, end)
         self.tb_lineno = {}  # frame --> lineno where the exception raised
         self.history = []
@@ -236,8 +237,10 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             return
         if self.config.exec_if_unfocused:
             pass  # Removed! Hopefully not needed!
-        self.print_stack_entry(self.stack[self.curindex])
-        self.print_hidden_frames_count()
+        if traceback:
+            self.print_stack_entry(self.stack[self.curindex])
+            self.print_hidden_frames_count()
+            print(file=self.stdout)
         completer = tabcompleter.setup()
         completer.config.readline.set_completer(self.complete)
         self.config.before_interaction_hook(self)
@@ -531,7 +534,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.lastcmd = "longlist"
         self._printlonglist()
 
-    def _printlonglist(self, linerange=None):
+    def _printlonglist(self, linerange=None, fnln=None):
         try:
             if self.curframe.f_code.co_name == "<module>":
                 lines, _ = inspect.findsource(self.curframe)
@@ -552,16 +555,19 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             end = min(end, lineno + len(lines))
             lines = lines[start - lineno:end - lineno]
             lineno = start
-        self._print_lines_pdbp(lines, lineno)
+        self._print_lines_pdbp(lines, lineno, fnln=fnln)
 
-    def _print_lines_pdbp(self, lines, lineno, print_markers=True):
+    def _print_lines_pdbp(self, lines, lineno, print_markers=True, fnln=None):
+        dots = "...."
         offset = 0
         try:
             max_line = int(lineno) + len(lines) - 1
             if max_line > 9999:
                 offset = 1
+                dots = "....."
             if max_line > 99999:
                 offset = 2
+                dots = "......"
         except Exception:
             pass
         exc_lineno = self.tb_lineno.get(self.curframe, None)
@@ -570,6 +576,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                  for line in lines]  # force tabs to 4 spaces
         width, height = self.get_terminal_size()
         width = width - offset
+        height = height - 1
         if self.config.truncate_long_lines:
             maxlength = max(width - 9, 16)
             lines = [set_line_width(line, maxlength) for line in lines]
@@ -599,7 +606,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 marker = ">>"
             lines[i] = self.format_line(lineno, marker, line)
             lineno += 1
-        print("\n".join(lines), file=self.stdout)
+        if self.ok_to_clear:
+            self.stdout.write(CLEARSCREEN)
+        if fnln:
+            print(fnln, file=self.stdout)
+            if int(lineno) > 0:
+                print(dots, file=self.stdout)
+            else:
+                print(file=self.stdout)
+        print("\n".join(lines), file=self.stdout, end="\n\n\033[F")
 
     do_ll = do_longlist
 
@@ -700,14 +715,12 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             if self.first_time_sticky:
                 self.first_time_sticky = False
             else:
-                self.stdout.write(CLEARSCREEN)
+                self.ok_to_clear = True
             frame, lineno = self.stack[self.curindex]
             filename = self.canonic(frame.f_code.co_filename)
-            s = "> %s(%r)" % (filename, lineno)
-            print(s, file=self.stdout)
-            print(file=self.stdout)
+            fnln = "> %s(%r)" % (filename, lineno)
             sticky_range = self.sticky_ranges.get(self.curframe, None)
-            self._printlonglist(sticky_range)
+            self._printlonglist(sticky_range, fnln=fnln)
             if "__exception__" in frame.f_locals:
                 s = self._format_exc_for_sticky(
                     frame.f_locals["__exception__"]
