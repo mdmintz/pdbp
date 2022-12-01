@@ -108,7 +108,7 @@ def set_line_width(line, width):
 
 
 class DefaultConfig(object):
-    prompt = "(Pdb+) "
+    prompt = Color.set("39;49;1", "(Pdb+) ")
     highlight = True
     sticky_by_default = True
     bg = "dark"
@@ -193,7 +193,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.ok_to_clear = False
         self.has_traceback = False
         self.sticky_ranges = {}  # frame --> (start, end)
-        self.tb_lineno = {}  # frame --> lineno where the exception raised
+        self.tb_lineno = {}  # frame --> lineno where the exception was raised
         self.history = []
         self.show_hidden_frames = False
         self._hidden_frames = []
@@ -239,13 +239,16 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if self.config.exec_if_unfocused:
             pass  # This option was removed!
         if traceback or not self.sticky or self.first_time_sticky:
-            self.has_traceback = True
+            if traceback:
+                self.has_traceback = True
             if not self.sticky:
                 print(file=self.stdout)
-            self.print_stack_entry(self.stack[self.curindex])
-            self.print_hidden_frames_count()
+            if not self.first_time_sticky:
+                self.print_stack_entry(self.stack[self.curindex])
+                self.print_hidden_frames_count()
             if self.sticky:
-                print(file=self.stdout)
+                if not traceback:
+                    self.stdout.write(CLEARSCREEN)
             else:
                 print(file=self.stdout, end="\n\033[F")
         completer = tabcompleter.setup()
@@ -565,18 +568,32 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self._print_lines_pdbp(lines, lineno, fnln=fnln)
 
     def _print_lines_pdbp(self, lines, lineno, print_markers=True, fnln=None):
-        dots = "...."
+        dots = "..."
         offset = 0
         try:
-            max_line = int(lineno) + len(lines) - 1
-            if max_line > 9999:
-                offset = 1
-                dots = "....."
-            if max_line > 99999:
-                offset = 2
-                dots = "......"
+            lineno_int = int(lineno)
         except Exception:
-            pass
+            lineno = 1
+            lineno_int = 1
+        if lineno_int == 1:
+            dots = ""
+        elif lineno_int > 99999:
+            dots = "......"
+        elif lineno_int > 9999:
+            dots = "....."
+        elif lineno_int > 999:
+            dots = "...."
+        elif lineno_int > 99:
+            dots = " ..."
+        elif lineno_int > 9:
+            dots = "  .."
+        else:
+            dots = "   ."
+        max_line = int(lineno) + len(lines) - 1
+        if max_line > 9999:
+            offset = 1
+        if max_line > 99999:
+            offset = 2
         exc_lineno = self.tb_lineno.get(self.curframe, None)
         lines = [line[:-1] for line in lines]  # remove the trailing "\n"
         lines = [line.replace("\t", "    ")
@@ -604,7 +621,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 maxlines = last_marker_line + height * 2 // 3
                 if len(lines) > maxlines:
                     lines = lines[:maxlines]
-                    lines.append("...")
+                    lines.append(Color.set("39;49;1", "..."))
         for i, line in enumerate(lines):
             marker = ""
             if lineno == self.curframe.f_lineno and print_markers:
@@ -618,7 +635,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if fnln:
             print(fnln, file=self.stdout)
             if int(lineno) > 1:
-                print(dots, file=self.stdout)
+                num_color = self.config.line_number_color
+                print(Color.set(num_color, dots), file=self.stdout)
             else:
                 print(file=self.stdout)
         print("\n".join(lines), file=self.stdout, end="\n\n\033[F")
@@ -725,7 +743,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 self.ok_to_clear = True
             frame, lineno = self.stack[self.curindex]
             filename = self.canonic(frame.f_code.co_filename)
-            fnln = "> %s(%r)" % (filename, lineno)
+            lno = Color.set(self.config.line_number_color, "%r" % lineno)
+            fname = Color.set(self.config.filename_color, filename)
+            fnln = None
+            if self.curindex and self.has_traceback:
+                colored_index = Color.set(Color.yellow, self.curindex)
+                fnln = "[%s] > %s(%s)" % (colored_index, fname, lno)
+            else:
+                fnln = "> %s(%s)" % (fname, lno)
             sticky_range = self.sticky_ranges.get(self.curframe, None)
             self._printlonglist(sticky_range, fnln=fnln)
             if "__exception__" in frame.f_locals:
@@ -804,10 +829,11 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     ):
         frame_index = frame_index if frame_index is not None else self.curindex
         frame, lineno = frame_lineno
+        colored_index = Color.set(Color.yellow, frame_index)
         if frame is self.curframe:
-            print("[%d] >" % frame_index, file=self.stdout, end=" ")
+            print("[%s] >" % colored_index, file=self.stdout, end=" ")
         else:
-            print("[%d]  " % frame_index, file=self.stdout, end=" ")
+            print("[%s]  " % colored_index, file=self.stdout, end=" ")
         print(
             self.format_stack_entry(frame_lineno, prompt_prefix),
             file=self.stdout
