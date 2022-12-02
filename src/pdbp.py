@@ -2,7 +2,6 @@
 pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.
 =====================================================
 """
-
 from __future__ import print_function
 import code
 import codecs

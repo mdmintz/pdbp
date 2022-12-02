@@ -4,7 +4,6 @@ An advanced console debugger for Python.
 Can be used as a drop-in replacement for pdb and pdbpp.
 (Python 2.7+ and Python 3.6+)
 """
-
 from setuptools import setup, find_packages  # noqa
 import os
 import sys
