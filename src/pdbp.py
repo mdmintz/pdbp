@@ -122,9 +122,9 @@ class DefaultConfig(object):
     enable_hidden_frames = False
     show_hidden_frames_count = False
     encodings = ("utf-8", "latin-1")
-    filename_color = Color.blue
+    filename_color = Color.yellow
     line_number_color = Color.turquoise
-    current_line_color = "39;49;7"  # Default: fg, bg, inversed.
+    current_line_color = "93;44;7"  # Old Default: "39;49;7"
     show_traceback_on_error = True
     show_traceback_on_error_limit = None
     default_pdb_kwargs = {
