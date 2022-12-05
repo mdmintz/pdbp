@@ -126,14 +126,15 @@ class DefaultConfig(object):
     line_number_color = Color.turquoise
     stack_color = Color.yellow
     pm_stack_color = Color.red
+    # https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
     return_value_color = "90;1"  # Gray
     pm_return_value_color = "31;1"  # Red (Post Mortem failure)
     num_return_value_color = "95;1"  # Bright Magenta (numbers)
     true_return_value_color = "32;1"  # Green
     false_return_value_color = "33;1"  # Yellow (red was taken)
     none_return_value_color = "33;1"  # Yellow (same as False)
-    current_line_color = "96;44;7;1"  # Old Default: "39;49;7"
-    pm_cur_line_color = "31;107;7;1"  # Post Mortem Color
+    current_line_color = "97;44;1"  # White on Blue (Old: "39;49;7")
+    pm_cur_line_color = "97;41;1"  # White on Red (Post Mortem Color)
     show_traceback_on_error = True
     show_traceback_on_error_limit = None
     default_pdb_kwargs = {
