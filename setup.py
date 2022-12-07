@@ -113,7 +113,7 @@ setup(
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
         'pygments>=2.13.0;python_version>="3.6"',
-        "tabcompleter>=1.0.0",
+        "tabcompleter>=1.1.0",
         "six>=1.16.0",
     ],
     setup_requires=[],
