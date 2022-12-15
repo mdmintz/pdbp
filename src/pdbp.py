@@ -124,8 +124,9 @@ class DefaultConfig(object):
     encodings = ("utf-8", "latin-1")
     filename_color = Color.fuchsia
     line_number_color = Color.turquoise
-    stack_color = Color.yellow
+    regular_stack_color = Color.yellow
     pm_stack_color = Color.red
+    stack_color = regular_stack_color
     # https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
     return_value_color = "90;1"  # Gray
     pm_return_value_color = "31;1"  # Red (Post Mortem failure)
@@ -133,8 +134,12 @@ class DefaultConfig(object):
     true_return_value_color = "32;1"  # Green
     false_return_value_color = "33;1"  # Yellow (red was taken)
     none_return_value_color = "33;1"  # Yellow (same as False)
-    current_line_color = "97;44;1"  # White on Blue (Old: "39;49;7")
+    regular_line_color = "97;44;1"  # White on Blue (Old: "39;49;7")
     pm_cur_line_color = "97;41;1"  # White on Red (Post Mortem Color)
+    exc_line_color = "31;103;1"  # Red on Yellow (Exception-handling)
+    current_line_color = regular_line_color
+    exception_caught = False
+    last_return_color = None
     show_traceback_on_error = True
     show_traceback_on_error_limit = None
     default_pdb_kwargs = {
@@ -247,6 +252,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             return
         if self.config.exec_if_unfocused:
             pass  # This option was removed!
+        if (
+            self.has_traceback
+            and not traceback
+            and self.config.exception_caught
+        ):
+            # The exception was caught, so no post mortem debug mode.
+            self.has_traceback = False
+            self.config.stack_color = self.config.regular_stack_color
+            self.config.current_line_color = self.config.regular_line_color
         if traceback or not self.sticky or self.first_time_sticky:
             if traceback:
                 self.has_traceback = True
@@ -447,6 +461,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if self.config.highlight and marker == "->":
             if self.config.current_line_color:
                 line = setbgcolor(line, self.config.current_line_color)
+        elif self.config.highlight and marker == ">>":
+            if self.config.exc_line_color:
+                line = setbgcolor(line, self.config.exc_line_color)
         return line
 
     def parseline(self, line):
@@ -633,12 +650,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 if len(lines) > maxlines:
                     lines = lines[:maxlines]
                     lines.append(Color.set("39;49;1", "..."))
+        self.config.exception_caught = False
         for i, line in enumerate(lines):
             marker = ""
             if lineno == self.curframe.f_lineno and print_markers:
                 marker = "->"
             elif lineno == exc_lineno and print_markers:
                 marker = ">>"
+                self.config.exception_caught = True
             lines[i] = self.format_line(lineno, marker, line)
             lineno += 1
         if self.ok_to_clear:
@@ -747,8 +766,10 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             print("** %s not in the display list **" % arg, file=self.stdout)
 
     def __get_return_color(self, s):
-        if self.has_traceback:
-            return self.config.pm_return_value_color
+        frame, lineno = self.stack[self.curindex]
+        if self.has_traceback or "__exception__" in frame.f_locals:
+            self.config.last_return_color = self.config.pm_return_value_color
+            return self.config.last_return_color
         the_return_color = None
         return_value = s.strip().split("return ")[-1]
         if return_value == "None":
@@ -761,14 +782,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             the_return_color = self.config.num_return_value_color
         else:
             the_return_color = self.config.return_value_color
-        return the_return_color
+        self.config.last_return_color = the_return_color
+        return self.config.last_return_color
 
     def _print_if_sticky(self):
         if self.sticky:
             if self.first_time_sticky:
                 self.first_time_sticky = False
-            else:
-                self.ok_to_clear = True
+            self.ok_to_clear = True
             frame, lineno = self.stack[self.curindex]
             filename = self.canonic(frame.f_code.co_filename)
             lno = Color.set(self.config.line_number_color, "%r" % lineno)
@@ -780,13 +801,20 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             fnln = "[%s] > %s(%s)" % (colored_index, fname, lno)
             sticky_range = self.sticky_ranges.get(self.curframe, None)
             self._printlonglist(sticky_range, fnln=fnln)
+            needs_extra_line = False
             if "__exception__" in frame.f_locals:
                 s = self._format_exc_for_sticky(
                     frame.f_locals["__exception__"]
                 )
                 if s:
-                    print(s, file=self.stdout)
-            elif "__return__" in frame.f_locals:
+                    last_return_color = self.config.last_return_color
+                    if (
+                        last_return_color == self.config.pm_return_value_color
+                        and not self.config.exception_caught
+                    ):
+                        print(s, file=self.stdout)
+                    needs_extra_line = True
+            if "__return__" in frame.f_locals:
                 rv = frame.f_locals["__return__"]
                 try:
                     s = repr(rv)
@@ -796,9 +824,20 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                     s = "(unprintable return value)"
                 s = " return " + s
                 if self.config.highlight:
-                    the_return_color = self.__get_return_color(s)
+                    if (
+                        needs_extra_line
+                        and frame.f_locals["__return__"] is None
+                    ):
+                        # There was an Exception. And returning None.
+                        the_return_color = self.config.exc_line_color
+                        s = s + " "
+                    else:
+                        the_return_color = self.__get_return_color(s)
                     s = Color.set(the_return_color, s)
                 print(s, file=self.stdout)
+                needs_extra_line = True
+            if needs_extra_line:
+                print(file=self.stdout, end="\n\033[F")
 
     def _format_exc_for_sticky(self, exc):
         if len(exc) != 2:
@@ -856,6 +895,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     def print_stack_entry(
         self, frame_lineno, prompt_prefix=pdb.line_prefix, frame_index=None
     ):
+        if self.sticky:
+            return
         frame_index = frame_index if frame_index is not None else self.curindex
         frame, lineno = frame_lineno
         colored_index = Color.set(self.config.stack_color, frame_index)
@@ -863,10 +904,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             print("[%s] >" % colored_index, file=self.stdout, end=" ")
         else:
             print("[%s]  " % colored_index, file=self.stdout, end=" ")
-        print(
-            self.format_stack_entry(frame_lineno, prompt_prefix),
-            file=self.stdout
-        )
+        stack_entry = self.format_stack_entry(frame_lineno, prompt_prefix)
+        print(stack_entry, file=self.stdout)
+        if not self.sticky:
+            print(file=self.stdout, end="\n\033[F")
+            if (
+                "\n-> except " in stack_entry or "\n-> except:" in stack_entry
+            ):
+                self.config.exception_caught = True
 
     def print_current_stack_entry(self):
         if self.sticky:
