@@ -63,7 +63,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.2.5",
+    version="1.2.6",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
