@@ -580,9 +580,12 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             else:
                 try:
                     lines, lineno = inspect.getsourcelines(self.curframe)
-                except Exception as e:
-                    print("** Error in inspect.getsourcelines: %s **" %
-                          e, file=self.stdout)
+                except Exception:
+                    print(file=self.stdout)
+                    self.sticky = False
+                    self.print_stack_entry(self.stack[self.curindex])
+                    self.sticky = True
+                    print(file=self.stdout, end="\n\033[F")
                     return
         except IOError as e:
             print("** Error: %s **" % e, file=self.stdout)
