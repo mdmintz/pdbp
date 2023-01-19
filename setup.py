@@ -1,9 +1,7 @@
-"""
-*** pdbp (Pdb+) ***
+"""*** pdbp (Pdb+) ***
 An advanced console debugger for Python.
 Can be used as a drop-in replacement for pdb and pdbpp.
-(Python 2.7+ and Python 3.6+)
-"""
+(Python 2.7+ and Python 3.6+)"""
 from setuptools import setup, find_packages  # noqa
 import os
 import sys
@@ -47,7 +45,7 @@ if sys.argv[-1] == "publish":
         os.system("rm -f dist/*.egg; rm -f dist/*.tar.gz; rm -f dist/*.whl")
         os.system("rm -rf build/bdist.*; rm -rf build/lib")
         print("\n*** Installing build: *** (Required for PyPI uploads)\n")
-        os.system("python -m pip install --upgrade 'build>=0.9.0'")
+        os.system("python -m pip install --upgrade 'build>=0.10.0'")
         print("\n*** Installing twine: *** (Required for PyPI uploads)\n")
         os.system("python -m pip install --upgrade 'twine>=4.0.2'")
         print("\n*** Installing tqdm: *** (Required for PyPI uploads)\n")
@@ -63,7 +61,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.2.7",
+    version="1.2.8",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -115,7 +113,7 @@ setup(
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",  # noqa: E501
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
-        'pygments>=2.13.0;python_version>="3.6"',
+        'pygments>=2.14.0;python_version>="3.6"',
         "tabcompleter>=1.1.0",
         "six>=1.16.0",
     ],
