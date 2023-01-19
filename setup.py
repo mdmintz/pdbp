@@ -1,9 +1,7 @@
-"""
-*** pdbp (Pdb+) ***
+"""*** pdbp (Pdb+) ***
 An advanced console debugger for Python.
 Can be used as a drop-in replacement for pdb and pdbpp.
-(Python 2.7+ and Python 3.6+)
-"""
+(Python 2.7+ and Python 3.6+)"""
 from setuptools import setup, find_packages  # noqa
 import os
 import sys
@@ -47,7 +45,7 @@ if sys.argv[-1] == "publish":
         os.system("rm -f dist/*.egg; rm -f dist/*.tar.gz; rm -f dist/*.whl")
         os.system("rm -rf build/bdist.*; rm -rf build/lib")
         print("\n*** Installing build: *** (Required for PyPI uploads)\n")
-        os.system("python -m pip install --upgrade 'build>=0.9.0'")
+        os.system("python -m pip install --upgrade 'build>=0.10.0'")
         print("\n*** Installing twine: *** (Required for PyPI uploads)\n")
         os.system("python -m pip install --upgrade 'twine>=4.0.2'")
         print("\n*** Installing tqdm: *** (Required for PyPI uploads)\n")
