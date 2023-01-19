@@ -113,7 +113,7 @@ setup(
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",  # noqa: E501
     install_requires=[
         'pygments>=2.5.2;python_version<"3.6"',
-        'pygments>=2.13.0;python_version>="3.6"',
+        'pygments>=2.14.0;python_version>="3.6"',
         "tabcompleter>=1.1.0",
         "six>=1.16.0",
     ],
