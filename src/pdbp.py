@@ -107,7 +107,7 @@ def set_line_width(line, width):
 
 
 class DefaultConfig(object):
-    prompt = Color.set("39;49;1", "(Pdb+) ")
+    prompt = "(Pdb+) "
     highlight = True
     sticky_by_default = True
     bg = "dark"
