@@ -1057,7 +1057,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
     def _open_editor(self, editor, lineno, filename):
         filename = filename.replace('"', '\\"')
-        os.system('%s +%d "%s"' % (editor, lineno, filename))
+        os.system('%s "%s"' % (editor, filename))
 
     def _get_current_position(self):
         frame = self.curframe
