@@ -1023,6 +1023,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     do_down.__doc__ = pdb.Pdb.do_down.__doc__
     do_d = do_down
 
+    def do_where(self, arg):
+        self.last_cmd = self.lastcmd = "where"
+        self.sticky = False
+        print(file=self.stdout)
+        self.print_stack_trace()
+    do_w = do_where
+    do_bt = do_where
+
     @staticmethod
     def get_terminal_size():
         fallback = (80, 24)
