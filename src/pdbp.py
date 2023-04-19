@@ -251,22 +251,20 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 and getattr(f, "encoding", False)
                 and f.encoding.lower() != "utf-8"):
             f = codecs.getwriter("utf-8")(getattr(f, "buffer", f))
-
         return f
 
     def _disable_pytest_capture_maybe(self):
         try:
-            import py.test
-            # Force raising of ImportError if pytest is not installed.
-            py.test.config
+            import pytest
+            import _pytest
+            pytest.Config
+            _pytest.config
         except (ImportError, AttributeError):
-            return
+            return  # pytest is not installed
         try:
-            capman = py.test.config.pluginmanager.getplugin("capturemanager")
-            capman.suspendcapture()
-        except KeyError:
-            pass
-        except AttributeError:
+            capman = _pytest.capture.CaptureManager("global")
+            capman.stop_global_capturing()
+        except (KeyError, AttributeError, Exception):
             pass
 
     def interaction(self, frame, traceback):
@@ -1057,7 +1055,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         frame, lineno = frame_lineno
         colored_index = Color.set(self.config.stack_color, frame_index)
         if frame is self.curframe:
-            print("[%s] >" % colored_index, file=self.stdout, end=" ")
+            indicator = " >"
+            color = self.config.regular_line_color
+            if self.has_traceback:
+                color = self.config.exc_line_color
+                if frame_index == len(self.stack) - 1:
+                    color = self.config.pm_cur_line_color
+            ind = setbgcolor(indicator, color)
+            print("[%s]%s" % (colored_index, ind), file=self.stdout, end=" ")
         else:
             print("[%s]  " % colored_index, file=self.stdout, end=" ")
         stack_entry = self.format_stack_entry(frame_lineno, prompt_prefix)

@@ -59,9 +59,6 @@ import pdb
 if hasattr(pdb, "DefaultConfig"):
     pdb.DefaultConfig.filename_color = pdb.Color.blue
     pdb.DefaultConfig.line_number_color = pdb.Color.turquoise
-    pdb.DefaultConfig.show_hidden_frames_count = False
-    pdb.DefaultConfig.disable_pytest_capturing = True
-    pdb.DefaultConfig.enable_hidden_frames = False
     pdb.DefaultConfig.truncate_long_lines = True
     pdb.DefaultConfig.sticky_by_default = True
 ```
