@@ -251,22 +251,20 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 and getattr(f, "encoding", False)
                 and f.encoding.lower() != "utf-8"):
             f = codecs.getwriter("utf-8")(getattr(f, "buffer", f))
-
         return f
 
     def _disable_pytest_capture_maybe(self):
         try:
-            import py.test
-            # Force raising of ImportError if pytest is not installed.
-            py.test.config
+            import pytest
+            import _pytest
+            pytest.Config
+            _pytest.config
         except (ImportError, AttributeError):
-            return
+            return  # pytest is not installed
         try:
-            capman = py.test.config.pluginmanager.getplugin("capturemanager")
-            capman.suspendcapture()
-        except KeyError:
-            pass
-        except AttributeError:
+            capman = _pytest.capture.CaptureManager("global")
+            capman.stop_global_capturing()
+        except (KeyError, AttributeError, Exception):
             pass
 
     def interaction(self, frame, traceback):
