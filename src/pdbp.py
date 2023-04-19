@@ -1057,7 +1057,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         frame, lineno = frame_lineno
         colored_index = Color.set(self.config.stack_color, frame_index)
         if frame is self.curframe:
-            print("[%s] >" % colored_index, file=self.stdout, end=" ")
+            indicator = " >"
+            color = self.config.regular_line_color
+            if self.has_traceback:
+                color = self.config.exc_line_color
+                if frame_index == len(self.stack) - 1:
+                    color = self.config.pm_cur_line_color
+            ind = setbgcolor(indicator, color)
+            print("[%s]%s" % (colored_index, ind), file=self.stdout, end=" ")
         else:
             print("[%s]  " % colored_index, file=self.stdout, end=" ")
         stack_entry = self.format_stack_entry(frame_lineno, prompt_prefix)
