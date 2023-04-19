@@ -10,33 +10,21 @@ import os.path
 import pprint
 import re
 import signal
-import subprocess
 import sys
 import traceback
 import types
 from collections import OrderedDict
+from inspect import signature
+from io import StringIO
 from tabcompleter import Completer, ConfigurableClass, Color
 import tabcompleter
 
 __url__ = "https://github.com/mdmintz/pdbp"
 __version__ = tabcompleter.LazyVersion("pdbp")
-
-try:
-    from inspect import signature  # Python >= 3.3
-except ImportError:
-    try:
-        from funcsigs import signature
-    except ImportError:
-        def signature(obj):
-            return " [pip install funcsigs to show the signature]"
+run_from_main = False
 
 # Digits, Letters, [], or Dots
 side_effects_free = re.compile(r"^ *[_0-9a-zA-Z\[\].]* *$")
-
-if sys.version_info < (3, ):
-    from io import BytesIO as StringIO
-else:
-    from io import StringIO
 
 
 def import_from_stdlib(name):
@@ -61,8 +49,6 @@ def rebind_globals(func, newglobals):
 
 def is_char_wide(char):
     # Returns True if the char is Chinese, Japanese, Korean, or another double.
-    if sys.version_info < (3, ):
-        return False  # Python 2.7 can't handle that
     special_c_r = [
         {"from": ord("\u4e00"), "to": ord("\u9FFF")},
         {"from": ord("\u3040"), "to": ord("\u30ff")},
@@ -177,6 +163,10 @@ def lasti2lineno(code, lasti):
     return 0
 
 
+class Restart(Exception):
+    pass
+
+
 class Undefined:
     def __repr__(self):
         return "<undefined>"
@@ -199,7 +189,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self._disable_pytest_capture_maybe()
         kwargs = self.config.default_pdb_kwargs.copy()
         kwargs.update(**kwds)
-        super(Pdb, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.prompt = self.config.prompt
         self.display_list = {}  # frame --> (name --> last seen value)
         self.sticky = self.config.sticky_by_default
@@ -212,6 +202,48 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.show_hidden_frames = False
         self._hidden_frames = []
         self.stdout = self.ensure_file_can_write_unicode(self.stdout)
+        self.saved_curframe = None
+        self.last_cmd = None
+
+    def _runmodule(self, module_name):
+        import __main__
+        import runpy
+        self._wait_for_mainpyfile = True
+        self._user_requested_quit = False
+        mod_name, mod_spec, code = runpy._get_module_details(module_name)
+        self.mainpyfile = self.canonic(code.co_filename)
+        __main__.__dict__.clear()
+        __main__.__dict__.update(
+            {
+                "__name__": "__main__",
+                "__file__": self.mainpyfile,
+                "__package__": mod_spec.parent,
+                "__loader__": mod_spec.loader,
+                "__spec__": mod_spec,
+                "__builtins__": __builtins__,
+            }
+        )
+        self.run(code)
+
+    def _runscript(self, filename):
+        import __main__
+        import io
+        __main__.__dict__.clear()
+        __main__.__dict__.update(
+            {
+                "__name__": "__main__",
+                "__file__": filename,
+                "__builtins__": __builtins__,
+            }
+        )
+        self._wait_for_mainpyfile = True
+        self.mainpyfile = self.canonic(filename)
+        self._user_requested_quit = False
+        with io.open_code(filename) as fp:
+            statement = (
+                "exec(compile(%r, %r, 'exec'))" % (fp.read(), self.mainpyfile)
+            )
+        self.run(statement)
 
     def ensure_file_can_write_unicode(self, f):
         # Wrap with an encoder, but only if not already wrapped.
@@ -297,7 +329,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             )
 
     def setup(self, frame, tb):
-        ret = super(Pdb, self).setup(frame, tb)
+        ret = super().setup(frame, tb)
         if not ret:
             while tb:
                 lineno = lasti2lineno(tb.tb_frame.f_code, tb.tb_lasti)
@@ -325,7 +357,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
     def get_stack(self, f, t):
         # Show all the frames except ones that should be hidden.
-        fullstack, idx = super(Pdb, self).get_stack(f, t)
+        fullstack, idx = super().get_stack(f, t)
         self.fullstack = fullstack
         return self.compute_stack(fullstack, idx)
 
@@ -359,7 +391,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     def forget(self):
         if not hasattr(self, "lineno"):
             # Only forget if not used with recursive set_trace.
-            super(Pdb, self).forget()
+            super().forget()
         self.raise_lineno = {}
 
     @classmethod
@@ -385,7 +417,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self._completions = self._get_all_completions(
                 completer.complete, text
             )
-            real_pdb = super(Pdb, self)
+            real_pdb = super()
             for x in self._get_all_completions(real_pdb.complete, text):
                 if x not in self._completions:
                     self._completions.append(x)
@@ -427,7 +459,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     stack_entry_regexp = re.compile(r"(.*?)\(([0-9]+?)\)(.*)", re.DOTALL)
 
     def format_stack_entry(self, frame_lineno, lprefix=": "):
-        entry = super(Pdb, self).format_stack_entry(frame_lineno, lprefix)
+        entry = super().format_stack_entry(frame_lineno, lprefix)
         entry = self.try_to_decode(entry)
         if self.config.highlight:
             match = self.stack_entry_regexp.match(entry)
@@ -469,8 +501,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     def parseline(self, line):
         if line.startswith("!!"):
             line = line[2:]
-            return super(Pdb, self).parseline(line)
-        cmd, arg, newline = super(Pdb, self).parseline(line)
+            return super().parseline(line)
+        cmd, arg, newline = super().parseline(line)
         if arg and arg.endswith("?"):
             if hasattr(self, "do_" + cmd):
                 cmd, arg = ("help", cmd)
@@ -488,7 +520,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             and len(newline) > 1
             and (newline[1] == "'" or newline[1] == '"')
         ):
-            return super(Pdb, self).parseline("!" + line)
+            return super().parseline("!" + line)
 
         if (
             cmd
@@ -499,16 +531,30 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 or arg.startswith("=")
             )
         ):
-            return super(Pdb, self).parseline("!" + line)
+            return super().parseline("!" + line)
 
         if cmd == "list" and arg.startswith("("):
             line = "!" + line
-            return super(Pdb, self).parseline(line)
+            return super().parseline(line)
 
         return cmd, arg, newline
 
     def do_inspect(self, arg):
-        obj = self._getval(arg)
+        if not arg:
+            print('Inspect Usage: "inspect <VAR>"', file=self.stdout)
+            print(
+                "Local variables: %r" % self.curframe_locals.keys(),
+                file=self.stdout,
+            )
+            return
+        try:
+            obj = self._getval(arg)
+        except Exception:
+            print(
+                'See "locals()" or "globals()" for available args!',
+                file=self.stdout,
+            )
+            return
         data = OrderedDict()
         data["Type"] = type(obj).__name__
         data["String Form"] = str(obj).strip()
@@ -520,9 +566,11 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             data["File"] = inspect.getabsfile(obj)
         except TypeError:
             pass
-        if (isinstance(obj, type)
-                and hasattr(obj, "__init__")
-                and getattr(obj, "__module__") != "__builtin__"):
+        if (
+            isinstance(obj, type)
+            and hasattr(obj, "__init__")
+            and getattr(obj, "__module__") != "__builtin__"
+        ):
             data["Docstring"] = obj.__doc__
             data["Constructor information"] = ""
             try:
@@ -542,35 +590,41 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
     def default(self, line):
         self.history.append(line)
-        return super(Pdb, self).default(line)
+        return super().default(line)
 
     def do_help(self, arg):
         try:
-            return super(Pdb, self).do_help(arg)
+            return super().do_help(arg)
         except AttributeError:
             print("*** No help for '{command}'".format(command=arg),
                   file=self.stdout)
     do_help.__doc__ = pdb.Pdb.do_help.__doc__
 
     def help_hidden_frames(self):
-        print('Use "u" and "d" to travel through the stack.', file=self.stdout)
-
-    def do_hf_unhide(self, arg):
-        self.show_hidden_frames = True
-        self.refresh_stack()
-
-    def do_hf_hide(self, arg):
-        self.show_hidden_frames = False
-        self.refresh_stack()
-
-    def do_hf_list(self, arg):
-        for frame_lineno in self._hidden_frames:
-            print(self.format_stack_entry(frame_lineno, pdb.line_prefix),
-                  file=self.stdout)
+        print('Use "u" and "d" to travel up/down the stack.', file=self.stdout)
 
     def do_longlist(self, arg):
-        self.lastcmd = "longlist"
-        self._printlonglist()
+        self.last_cmd = self.lastcmd = "longlist"
+        self.sticky = True
+        self._print_if_sticky()
+    do_ll = do_longlist
+
+    def do_jump(self, arg):
+        self.last_cmd = self.lastcmd = "jump"
+        if self.curindex + 1 != len(self.stack):
+            self.error("You can only jump within the bottom frame!")
+            return
+        try:
+            arg = int(arg)
+        except ValueError:
+            self.error("The 'jump' command requires a line number!")
+        else:
+            try:
+                self.curframe.f_lineno = arg
+                self.stack[self.curindex] = self.stack[self.curindex][0], arg
+                self.print_current_stack_entry()
+            except ValueError as e:
+                self.error('Jump failed: %s' % e)
 
     def _printlonglist(self, linerange=None, fnln=None):
         try:
@@ -588,8 +642,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                     print(file=self.stdout, end="\n\033[F")
                     return
         except IOError as e:
-            print("** Error: %s **" % e, file=self.stdout)
-            return
+            try:
+                self.sticky = False
+                self.print_stack_entry(self.stack[self.curindex])
+                self.sticky = True
+                return
+            except Exception:
+                self.sticky = True
+                print("** (%s) **" % e, file=self.stdout)
+                return
         if linerange:
             start, end = linerange
             start = max(start, lineno)
@@ -674,35 +735,107 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 print(file=self.stdout)
         print("\n".join(lines), file=self.stdout, end="\n\n\033[F")
 
-    do_ll = do_longlist
-
     def do_list(self, arg):
+        try:
+            import linecache
+            y = 0
+            if run_from_main:
+                y = 6
+            filename = self.curframe.f_code.co_filename
+            lines = linecache.getlines(filename, self.curframe.f_globals)
+            if (
+                not arg
+                and (
+                    (self.last_cmd == "list" and self.lineno >= len(lines) + y)
+                    or self.last_cmd != "list"
+                    or (
+                        self.saved_curframe != self.curframe
+                        or self.lineno < self.curframe.f_lineno
+                    )
+                )
+            ):
+                arg = "."  # Go back to the active cursor point
+        except Exception:
+            pass
+        self.last_cmd = self.lastcmd = "list"
+        self.saved_curframe = self.curframe
         oldstdout = self.stdout
         self.stdout = StringIO()
-        super(Pdb, self).do_list(arg)
+        super().do_list(arg)
         src = self.format_source(self.stdout.getvalue())
         self.stdout = oldstdout
-        print(src, file=self.stdout, end="")
+        print(src, file=self.stdout, end="\n\033[F")
 
     do_list.__doc__ = pdb.Pdb.do_list.__doc__
     do_l = do_list
 
     def do_continue(self, arg):
+        self.last_cmd = self.lastcmd = "continue"
         if arg != "":
             self.do_tbreak(arg)
-        return super(Pdb, self).do_continue("")
+        return super().do_continue(arg)
     do_continue.__doc__ = pdb.Pdb.do_continue.__doc__
     do_c = do_cont = do_continue
 
+    def do_next(self, arg):
+        self.last_cmd = self.lastcmd = "next"
+        return super().do_next(arg)
+    do_next.__doc__ = pdb.Pdb.do_next.__doc__
+    do_n = do_next
+
+    def do_step(self, arg):
+        self.last_cmd = self.lastcmd = "step"
+        return super().do_step(arg)
+    do_step.__doc__ = pdb.Pdb.do_step.__doc__
+    do_s = do_step
+
+    def do_until(self, arg):
+        self.last_cmd = self.lastcmd = "until"
+        return super().do_until(arg)
+    do_until.__doc__ = pdb.Pdb.do_until.__doc__
+    do_unt = do_until
+
+    def do_p(self, arg):
+        try:
+            self.message(repr(self._getval(arg)))
+        except Exception:
+            if not arg:
+                print('Print usage: "p <VAR>"', file=self.stdout)
+                print(
+                    "Local variables: %r" % self.curframe_locals.keys(),
+                    file=self.stdout,
+                )
+                return
+            else:
+                print(
+                    'See "locals()" or "globals()" for available args!',
+                    file=self.stdout,
+                )
+                return
+    do_p.__doc__ = pdb.Pdb.do_p.__doc__
+
     def do_pp(self, arg):
-        width, height = self.get_terminal_size()
+        width, _ = self.get_terminal_size()
         try:
             pprint.pprint(self._getval(arg), self.stdout, width=width)
         except Exception:
-            pass
+            if not arg:
+                print('PrettyPrint usage: "pp <VAR>"', file=self.stdout)
+                print(
+                    "Local variables: %r" % self.curframe_locals.keys(),
+                    file=self.stdout,
+                )
+                return
+            else:
+                print(
+                    'See "locals()" or "globals()" for available args!',
+                    file=self.stdout,
+                )
+                return
     do_pp.__doc__ = pdb.Pdb.do_pp.__doc__
 
     def do_debug(self, arg):
+        self.last_cmd = self.lastcmd = "debug"
         Config = self.ConfigFactory
 
         class PdbpWithConfig(self.__class__):
@@ -710,10 +843,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 kwargs.setdefault("Config", Config)
                 super(PdbpWithConfig, self_withcfg).__init__(*args, **kwargs)
                 self_withcfg.use_rawinput = self.use_rawinput
-        if sys.version_info < (3, ):
-            do_debug_func = pdb.Pdb.do_debug.im_func
-        else:
-            do_debug_func = pdb.Pdb.do_debug
+        do_debug_func = pdb.Pdb.do_debug
         newglobals = do_debug_func.__globals__.copy()
         newglobals["Pdb"] = PdbpWithConfig
         orig_do_debug = rebind_globals(do_debug_func, newglobals)
@@ -723,8 +853,18 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             exc_info = sys.exc_info()[:2]
             msg = traceback.format_exception_only(*exc_info)[-1].strip()
             self.error(msg)
-
     do_debug.__doc__ = pdb.Pdb.do_debug.__doc__
+
+    def do_run(self, arg):
+        """Restart/Rerun during ``python -m pdbp <script.py>`` mode."""
+        self.last_cmd = self.lastcmd = "run"
+        if arg:
+            import shlex
+            argv0 = sys.argv[0:1]
+            sys.argv = shlex.split(arg)
+            sys.argv[:0] = argv0
+        raise Restart
+    do_restart = do_run
 
     def do_interact(self, arg):
         ns = self.curframe.f_globals.copy()
@@ -735,8 +875,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         try:
             from rpython.translator.tool.reftracker import track
         except ImportError:
-            print("** cannot import pypy.translator.tool.reftracker **",
-                  file=self.stdout)
+            print(
+                "** cannot import pypy.translator.tool.reftracker **",
+                file=self.stdout,
+            )
+            print(
+                "This command requires pypy to be in the current PYTHONPATH.",
+                file=self.stdout,
+            )
             return
         try:
             val = self._getval(arg)
@@ -888,6 +1034,13 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self.print_stack_entry(self.stack[self.curindex])
             print(file=self.stdout, end="\n\033[F")
 
+    def do_truncate(self, arg):
+        # Toggle line truncation. Usage: "truncate".
+        # (The changes only appear in "sticky" mode.)
+        self.config.truncate_long_lines = not self.config.truncate_long_lines
+        self.print_current_stack_entry()
+    do_trun = do_truncate
+
     def print_stack_trace(self):
         try:
             for frame_index, frame_lineno in enumerate(self.stack):
@@ -975,6 +1128,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     do_f = do_frame
 
     def do_up(self, arg="1"):
+        self.last_cmd = self.lastcmd = "up"
         arg = "1" if arg == "" else arg
         try:
             arg = int(arg)
@@ -996,6 +1150,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     do_u = do_up
 
     def do_down(self, arg="1"):
+        self.last_cmd = self.lastcmd = "down"
         arg = "1" if arg == "" else arg
         try:
             arg = int(arg)
@@ -1015,6 +1170,14 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self.lineno = None
     do_down.__doc__ = pdb.Pdb.do_down.__doc__
     do_d = do_down
+
+    def do_where(self, arg):
+        self.last_cmd = self.lastcmd = "where"
+        self.sticky = False
+        print(file=self.stdout)
+        self.print_stack_trace()
+    do_w = do_where
+    do_bt = do_where
 
     @staticmethod
     def get_terminal_size():
@@ -1042,7 +1205,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
     def _open_editor(self, editor, lineno, filename):
         filename = filename.replace('"', '\\"')
-        os.system('%s +%d "%s"' % (editor, lineno, filename))
+        os.system('%s "%s"' % (editor, filename))
 
     def _get_current_position(self):
         frame = self.curframe
@@ -1065,8 +1228,6 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         editor = self.config.editor
         self._open_editor(editor, lineno, filename)
 
-    do_ed = do_edit
-
     def _get_history(self):
         return [s for s in self.history if not side_effects_free.match(s)]
 
@@ -1078,46 +1239,17 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         history = [indent + s for s in self._get_history()]
         return "\n".join(history) + "\n"
 
-    def _open_stdin_paste(self, stdin_paste, lineno, filename, text):
-        proc = subprocess.Popen([stdin_paste, "+%d" % lineno, filename],
-                                stdin=subprocess.PIPE)
-        proc.stdin.write(text)
-        proc.stdin.close()
-
-    def _put(self, text):
-        stdin_paste = self.config.stdin_paste
-        if stdin_paste is None:
-            print('** Error: the "stdin_paste" option is not configured **',
-                  file=self.stdout)
-        filename = self.start_filename
-        lineno = self.start_lineno
-        self._open_stdin_paste(stdin_paste, lineno, filename, text)
-
-    def do_put(self, arg):
-        text = self._get_history_text()
-        self._put(text)
-
-    def do_paste(self, arg):
-        arg = arg.strip()
-        old_stdout = self.stdout
-        self.stdout = StringIO()
-        self.onecmd(arg)
-        text = self.stdout.getvalue()
-        self.stdout = old_stdout
-        sys.stdout.write(text)
-        self._put(text)
-
     def set_trace(self, frame=None):
         """Remember starting frame. Used with pytest."""
         if frame is None:
             frame = sys._getframe().f_back
         self._via_set_trace_frame = frame
-        return super(Pdb, self).set_trace(frame)
+        return super().set_trace(frame)
 
     def is_skipped_module(self, module_name):
         if module_name is None:
             return False
-        return super(Pdb, self).is_skipped_module(module_name)
+        return super().is_skipped_module(module_name)
 
     if not hasattr(pdb.Pdb, "message"):  # For py27.
 
@@ -1160,9 +1292,6 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 break
             removed_bdb_context = removed_bdb_context.__context__
 
-
-if hasattr(pdb, "Restart"):
-    Restart = pdb.Restart
 
 if hasattr(pdb, "_usage"):
     _usage = pdb._usage
@@ -1250,14 +1379,6 @@ def hideframe(func):
     new_co_consts = c.co_consts + (_HIDE_FRAME,)
     if hasattr(c, "replace"):
         c = c.replace(co_consts=new_co_consts)
-    elif sys.version_info < (3, ):
-        c = types.CodeType(
-            c.co_argcount, c.co_nlocals, c.co_stacksize,
-            c.co_flags, c.co_code,
-            new_co_consts,
-            c.co_names, c.co_varnames, c.co_filename,
-            c.co_name, c.co_firstlineno, c.co_lnotab,
-            c.co_freevars, c.co_cellvars)
     else:
         c = types.CodeType(
             c.co_argcount, c.co_kwonlyargcount, c.co_nlocals, c.co_stacksize,
@@ -1265,7 +1386,8 @@ def hideframe(func):
             c.co_consts + (_HIDE_FRAME,),
             c.co_names, c.co_varnames, c.co_filename,
             c.co_name, c.co_firstlineno, c.co_lnotab,
-            c.co_freevars, c.co_cellvars)
+            c.co_freevars, c.co_cellvars,
+        )
     func.__code__ = c
     return func
 
@@ -1316,6 +1438,91 @@ if sys.version_info[0] >= 3:
     pdb.cleanup = cleanup
     pdb.xpm = xpm
 
+
+def print_pdb_continue_line():
+    from pdb import Pdb
+    width, height = Pdb.get_terminal_size()
+    pdb_continue = " PDB continue "
+    border_line = ">>>>>>>>%s>>>>>>>>" % pdb_continue
+    try:
+        terminal_size = width
+        if terminal_size < 30:
+            terminal_size = 30
+        border_len = terminal_size - len(pdb_continue)
+        border_left_len = int(border_len / 2)
+        border_right_len = int(border_len - border_left_len)
+        border_left = ">" * border_left_len
+        border_right = ">" * border_right_len
+        border_line = (border_left + pdb_continue + border_right)
+    except Exception:
+        pass
+    print("\n" + border_line + "\n")
+
+
+def main():
+    import getopt
+    opts, args = getopt.getopt(sys.argv[1:], "mhc:", ["help", "command="])
+    if not args:
+        print(_usage)
+        sys.exit(2)
+    commands = []
+    run_as_module = False
+    for opt, optarg in opts:
+        if opt in ["-h", "--help"]:
+            print(_usage)
+            sys.exit()
+        elif opt in ["-c", "--command"]:
+            commands.append(optarg)
+        elif opt in ["-m"]:
+            run_as_module = True
+    mainpyfile = args[0]
+    if not run_as_module and not os.path.exists(mainpyfile):
+        print("Error: %s does not exist!" % mainpyfile)
+        sys.exit(1)
+    sys.argv[:] = args
+    if not run_as_module:
+        mainpyfile = os.path.realpath(mainpyfile)
+        sys.path[0] = os.path.dirname(mainpyfile)
+    pdb = Pdb()
+    pdb.rcLines.extend(commands)
+    stay_in_pdb = True
+    while stay_in_pdb:
+        try:
+            if run_as_module:
+                pdb._runmodule(mainpyfile)
+            else:
+                pdb._runscript(mainpyfile)
+            if pdb._user_requested_quit:
+                break
+            print_pdb_continue_line()
+            stay_in_pdb = False
+        except Restart:
+            print("Restarting", mainpyfile, "with arguments:")
+            print("\t" + " ".join(sys.argv[1:]))
+            stay_in_pdb = True
+        except SystemExit:
+            print("The program exited via sys.exit(). Exit status:", end=" ")
+            print(sys.exc_info()[1])
+            stay_in_pdb = False
+        except SyntaxError:
+            try:
+                traceback.print_exc()
+            except Exception:
+                pass
+            sys.exit(1)
+            stay_in_pdb = False
+        except Exception:
+            try:
+                traceback.print_exc()
+            except Exception:
+                pass
+            t = sys.exc_info()[2]
+            pdb.interaction(None, t)
+            print_pdb_continue_line()
+            stay_in_pdb = False
+
+
 if __name__ == "__main__":
-    import pdb
-    pdb.main()
+    run_from_main = True
+    import pdbp
+    pdbp.main()

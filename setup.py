@@ -1,7 +1,7 @@
 """*** pdbp (Pdb+) ***
 An advanced console debugger for Python.
 Can be used as a drop-in replacement for pdb and pdbpp.
-(Python 2.7+ and Python 3.6+)"""
+(Python 3.6+)"""
 from setuptools import setup, find_packages  # noqa
 import os
 import sys
@@ -46,6 +46,8 @@ if sys.argv[-1] == "publish":
         os.system("rm -rf build/bdist.*; rm -rf build/lib")
         print("\n*** Installing build: *** (Required for PyPI uploads)\n")
         os.system("python -m pip install --upgrade 'build>=0.10.0'")
+        print("\n*** Installing pkginfo: *** (Required for PyPI uploads)\n")
+        os.system("python -m pip install --upgrade 'pkginfo>=1.9.6'")
         print("\n*** Installing twine: *** (Required for PyPI uploads)\n")
         os.system("python -m pip install --upgrade 'twine>=4.0.2'")
         print("\n*** Installing tqdm: *** (Required for PyPI uploads)\n")
@@ -61,7 +63,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.2.8",
+    version="1.3.0",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -93,7 +95,6 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
@@ -110,11 +111,11 @@ setup(
         "Topic :: Software Development :: Testing",
         "Topic :: Utilities",
     ],
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",  # noqa: E501
+    python_requires=">=3.6",
     install_requires=[
-        'pygments>=2.5.2;python_version<"3.6"',
-        'pygments>=2.14.0;python_version>="3.6"',
-        "tabcompleter>=1.1.0",
+        'pygments>=2.14.0;python_version<"3.7"',
+        'pygments>=2.15.1;python_version>="3.7"',
+        "tabcompleter>=1.2.0",
         "six>=1.16.0",
     ],
     setup_requires=[],
