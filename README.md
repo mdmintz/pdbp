@@ -1,6 +1,6 @@
 # pdbp (Pdb+) [![](https://img.shields.io/pypi/v/pdbp.svg)](https://pypi.python.org/pypi/pdbp)
 
-<img width="600" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/207774790-fb63af65-5f98-4d92-afe3-12c2733d4db6.png">
+<img width="650" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/207774790-fb63af65-5f98-4d92-afe3-12c2733d4db6.png">
 
 --------
 
@@ -10,7 +10,7 @@
 
 --------
 
-<img width="600" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/204408641-9c221bb6-578b-4b0f-807b-8454844e42e8.png">
+<img width="650" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/232536483-9236c513-c5ba-4444-8faa-e8ea64eb5ce2.png">
 
 
 ## Installation & Usage:
@@ -34,6 +34,8 @@ import pdbp  # noqa
 To trigger a breakpoint in your code with ``pytest``, add ``--trace`` (to start tests with a breakpoint) or ``--pdb`` (to trigger a breakpoint if a test fails).
 
 Basic **``Pdb+``** console commands: ``n``, ``c``, ``s`` => ``next``, ``continue``, ``step``.
+
+Use the ``u`` and ``d`` keys to travel ``up`` and ``down`` the stack!
 
 (To learn more **Pdb+** console commands, type ``help`` in the **Pdb+** console and press ``Enter/Return``.)
 
@@ -74,7 +76,17 @@ pdbp.set_trace()
 
 ### pdbp (Pdb+) commands:
 
-<img width="550" alt="Pdb+ Commands" src="https://user-images.githubusercontent.com/6788579/204386211-5fc44f73-e29f-4e87-b0ca-bb8ea69217af.png">
+<img width="760" alt="Pdb+ commands" src="https://user-images.githubusercontent.com/6788579/232948402-8700033f-a1b2-45f6-82e5-6b1a83d3d6c4.png">
+
+
+### Post Mortem Debug Mode:
+
+<img width="640" alt="Pdb+ Post Mortem Debug Mode" src="https://user-images.githubusercontent.com/6788579/232537816-0b9e9048-724f-48cb-81e3-5cc403109de9.png">
+
+
+### The ``where`` / ``w`` command, which displays the current stack:
+
+<img width="870" alt="Example of the 'where' command" src="https://user-images.githubusercontent.com/6788579/232962807-2d469603-a1d0-4891-8d0e-f03a4e1d0d00.png">
 
 
 ### Sticky Mode vs Non-Sticky Mode:
@@ -83,11 +95,11 @@ The default mode (``sticky``) lets you see a lot more lines of code from the deb
 
 > **Sticky Mode:**
 
-<img width="550" alt="Pdb+ Stick Mode" src="https://user-images.githubusercontent.com/6788579/204890148-53d2567b-9a56-4243-a7d7-66100a284312.png">
+<img width="600" alt="Pdb+ Stick Mode" src="https://user-images.githubusercontent.com/6788579/204890148-53d2567b-9a56-4243-a7d7-66100a284312.png">
 
 > **Non-Sticky Mode:**
 
-<img width="550" alt="Pdb+ Non-Sticky Mode" src="https://user-images.githubusercontent.com/6788579/204890164-8465bc22-0f20-43f1-8ab7-b4316718a4c6.png">
+<img width="600" alt="Pdb+ Non-Sticky Mode" src="https://user-images.githubusercontent.com/6788579/204890164-8465bc22-0f20-43f1-8ab7-b4316718a4c6.png">
 
 
 ### More examples:
@@ -99,11 +111,7 @@ The default mode (``sticky``) lets you see a lot more lines of code from the deb
 
 --------
 
-<img width="550" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/204896775-38d8551b-1d3c-4e95-9f5c-0e03c9de13da.png">
-
---------
-
-<img width="550" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/204359676-137cf541-12ef-469a-9d29-99709608ede0.png">
+<img width="600" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/204896775-38d8551b-1d3c-4e95-9f5c-0e03c9de13da.png">
 
 --------
 
