@@ -1316,6 +1316,91 @@ if sys.version_info[0] >= 3:
     pdb.cleanup = cleanup
     pdb.xpm = xpm
 
+
+def print_pdb_continue_line():
+    from pdb import Pdb
+    width, height = Pdb.get_terminal_size()
+    pdb_continue = " PDB continue "
+    border_line = ">>>>>>>>%s>>>>>>>>" % pdb_continue
+    try:
+        terminal_size = width
+        if terminal_size < 30:
+            terminal_size = 30
+        border_len = terminal_size - len(pdb_continue)
+        border_left_len = int(border_len / 2)
+        border_right_len = int(border_len - border_left_len)
+        border_left = ">" * border_left_len
+        border_right = ">" * border_right_len
+        border_line = (border_left + pdb_continue + border_right)
+    except Exception:
+        pass
+    print("\n" + border_line + "\n")
+
+
+def main():
+    import getopt
+    opts, args = getopt.getopt(sys.argv[1:], "mhc:", ["help", "command="])
+    if not args:
+        print(_usage)
+        sys.exit(2)
+    commands = []
+    run_as_module = False
+    for opt, optarg in opts:
+        if opt in ["-h", "--help"]:
+            print(_usage)
+            sys.exit()
+        elif opt in ["-c", "--command"]:
+            commands.append(optarg)
+        elif opt in ["-m"]:
+            run_as_module = True
+    mainpyfile = args[0]
+    if not run_as_module and not os.path.exists(mainpyfile):
+        print("Error: %s does not exist!" % mainpyfile)
+        sys.exit(1)
+    sys.argv[:] = args
+    if not run_as_module:
+        mainpyfile = os.path.realpath(mainpyfile)
+        sys.path[0] = os.path.dirname(mainpyfile)
+    pdb = Pdb()
+    pdb.rcLines.extend(commands)
+    stay_in_pdb = True
+    while stay_in_pdb:
+        try:
+            if run_as_module:
+                pdb._runmodule(mainpyfile)
+            else:
+                pdb._runscript(mainpyfile)
+            if pdb._user_requested_quit:
+                break
+            print_pdb_continue_line()
+            stay_in_pdb = False
+        except Restart:
+            print("Restarting", mainpyfile, "with arguments:")
+            print("\t" + " ".join(sys.argv[1:]))
+            stay_in_pdb = True
+        except SystemExit:
+            print("The program exited via sys.exit(). Exit status:", end=" ")
+            print(sys.exc_info()[1])
+            stay_in_pdb = False
+        except SyntaxError:
+            try:
+                traceback.print_exc()
+            except Exception:
+                pass
+            sys.exit(1)
+            stay_in_pdb = False
+        except Exception:
+            try:
+                traceback.print_exc()
+            except Exception:
+                pass
+            t = sys.exc_info()[2]
+            pdb.interaction(None, t)
+            print_pdb_continue_line()
+            stay_in_pdb = False
+
+
 if __name__ == "__main__":
-    import pdb
-    pdb.main()
+    run_from_main = True
+    import pdbp
+    pdbp.main()
