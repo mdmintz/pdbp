@@ -888,6 +888,13 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self.print_stack_entry(self.stack[self.curindex])
             print(file=self.stdout, end="\n\033[F")
 
+    def do_truncate(self, arg):
+        # Toggle line truncation. Usage: "truncate".
+        # (The changes only appear in "sticky" mode.)
+        self.config.truncate_long_lines = not self.config.truncate_long_lines
+        self.print_current_stack_entry()
+    do_trun = do_truncate
+
     def print_stack_trace(self):
         try:
             for frame_index, frame_lineno in enumerate(self.stack):
