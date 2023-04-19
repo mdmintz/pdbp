@@ -1,7 +1,7 @@
 """*** pdbp (Pdb+) ***
 An advanced console debugger for Python.
 Can be used as a drop-in replacement for pdb and pdbpp.
-(Python 2.7+ and Python 3.6+)"""
+(Python 3.6+)"""
 from setuptools import setup, find_packages  # noqa
 import os
 import sys
@@ -93,7 +93,6 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",

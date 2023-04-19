@@ -10,33 +10,21 @@ import os.path
 import pprint
 import re
 import signal
-import subprocess
 import sys
 import traceback
 import types
 from collections import OrderedDict
+from inspect import signature
+from io import StringIO
 from tabcompleter import Completer, ConfigurableClass, Color
 import tabcompleter
 
 __url__ = "https://github.com/mdmintz/pdbp"
 __version__ = tabcompleter.LazyVersion("pdbp")
-
-try:
-    from inspect import signature  # Python >= 3.3
-except ImportError:
-    try:
-        from funcsigs import signature
-    except ImportError:
-        def signature(obj):
-            return " [pip install funcsigs to show the signature]"
+run_from_main = False
 
 # Digits, Letters, [], or Dots
 side_effects_free = re.compile(r"^ *[_0-9a-zA-Z\[\].]* *$")
-
-if sys.version_info < (3, ):
-    from io import BytesIO as StringIO
-else:
-    from io import StringIO
 
 
 def import_from_stdlib(name):
@@ -61,8 +49,6 @@ def rebind_globals(func, newglobals):
 
 def is_char_wide(char):
     # Returns True if the char is Chinese, Japanese, Korean, or another double.
-    if sys.version_info < (3, ):
-        return False  # Python 2.7 can't handle that
     special_c_r = [
         {"from": ord("\u4e00"), "to": ord("\u9FFF")},
         {"from": ord("\u3040"), "to": ord("\u30ff")},
@@ -199,7 +185,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self._disable_pytest_capture_maybe()
         kwargs = self.config.default_pdb_kwargs.copy()
         kwargs.update(**kwds)
-        super(Pdb, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.prompt = self.config.prompt
         self.display_list = {}  # frame --> (name --> last seen value)
         self.sticky = self.config.sticky_by_default
@@ -297,7 +283,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             )
 
     def setup(self, frame, tb):
-        ret = super(Pdb, self).setup(frame, tb)
+        ret = super().setup(frame, tb)
         if not ret:
             while tb:
                 lineno = lasti2lineno(tb.tb_frame.f_code, tb.tb_lasti)
@@ -325,7 +311,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
 
     def get_stack(self, f, t):
         # Show all the frames except ones that should be hidden.
-        fullstack, idx = super(Pdb, self).get_stack(f, t)
+        fullstack, idx = super().get_stack(f, t)
         self.fullstack = fullstack
         return self.compute_stack(fullstack, idx)
 
@@ -359,7 +345,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     def forget(self):
         if not hasattr(self, "lineno"):
             # Only forget if not used with recursive set_trace.
-            super(Pdb, self).forget()
+            super().forget()
         self.raise_lineno = {}
 
     @classmethod
@@ -385,7 +371,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self._completions = self._get_all_completions(
                 completer.complete, text
             )
-            real_pdb = super(Pdb, self)
+            real_pdb = super()
             for x in self._get_all_completions(real_pdb.complete, text):
                 if x not in self._completions:
                     self._completions.append(x)
@@ -427,7 +413,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     stack_entry_regexp = re.compile(r"(.*?)\(([0-9]+?)\)(.*)", re.DOTALL)
 
     def format_stack_entry(self, frame_lineno, lprefix=": "):
-        entry = super(Pdb, self).format_stack_entry(frame_lineno, lprefix)
+        entry = super().format_stack_entry(frame_lineno, lprefix)
         entry = self.try_to_decode(entry)
         if self.config.highlight:
             match = self.stack_entry_regexp.match(entry)
@@ -469,8 +455,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     def parseline(self, line):
         if line.startswith("!!"):
             line = line[2:]
-            return super(Pdb, self).parseline(line)
-        cmd, arg, newline = super(Pdb, self).parseline(line)
+            return super().parseline(line)
+        cmd, arg, newline = super().parseline(line)
         if arg and arg.endswith("?"):
             if hasattr(self, "do_" + cmd):
                 cmd, arg = ("help", cmd)
@@ -488,7 +474,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             and len(newline) > 1
             and (newline[1] == "'" or newline[1] == '"')
         ):
-            return super(Pdb, self).parseline("!" + line)
+            return super().parseline("!" + line)
 
         if (
             cmd
@@ -1265,14 +1251,6 @@ def hideframe(func):
     new_co_consts = c.co_consts + (_HIDE_FRAME,)
     if hasattr(c, "replace"):
         c = c.replace(co_consts=new_co_consts)
-    elif sys.version_info < (3, ):
-        c = types.CodeType(
-            c.co_argcount, c.co_nlocals, c.co_stacksize,
-            c.co_flags, c.co_code,
-            new_co_consts,
-            c.co_names, c.co_varnames, c.co_filename,
-            c.co_name, c.co_firstlineno, c.co_lnotab,
-            c.co_freevars, c.co_cellvars)
     else:
         c = types.CodeType(
             c.co_argcount, c.co_kwonlyargcount, c.co_nlocals, c.co_stacksize,
