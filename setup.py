@@ -111,11 +111,11 @@ setup(
         "Topic :: Software Development :: Testing",
         "Topic :: Utilities",
     ],
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",  # noqa: E501
+    python_requires=">=3.6",
     install_requires=[
-        'pygments>=2.5.2;python_version<"3.6"',
-        'pygments>=2.14.0;python_version>="3.6"',
-        "tabcompleter>=1.1.0",
+        'pygments>=2.14.0;python_version<"3.7"',
+        'pygments>=2.15.1;python_version>="3.7"',
+        "tabcompleter>=1.2.0",
         "six>=1.16.0",
     ],
     setup_requires=[],
