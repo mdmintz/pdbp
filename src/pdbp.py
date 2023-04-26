@@ -624,6 +624,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 self.print_current_stack_entry()
             except ValueError as e:
                 self.error('Jump failed: %s' % e)
+    do_j = do_jump
 
     def _printlonglist(self, linerange=None, fnln=None):
         try:
