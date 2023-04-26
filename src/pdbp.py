@@ -463,6 +463,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             match = self.stack_entry_regexp.match(entry)
             if match:
                 filename, lineno, other = match.groups()
+                other = self.format_source(other.rstrip()).rstrip()
                 filename = Color.set(self.config.filename_color, filename)
                 lineno = Color.set(self.config.line_number_color, lineno)
                 entry = "%s(%s)%s" % (filename, lineno, other)
