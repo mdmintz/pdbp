@@ -103,7 +103,7 @@ class DefaultConfig(object):
     editor = "${EDITOR:-vi}"  # Use $EDITOR if set; else default to vi.
     stdin_paste = None
     exec_if_unfocused = None  # This option was removed!
-    truncate_long_lines = True
+    truncate_long_lines = False
     disable_pytest_capturing = True
     enable_hidden_frames = False
     show_hidden_frames_count = False
