@@ -1,6 +1,6 @@
 # pdbp (Pdb+) [![](https://img.shields.io/pypi/v/pdbp.svg)](https://pypi.python.org/pypi/pdbp)
 
-<img width="650" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/207774790-fb63af65-5f98-4d92-afe3-12c2733d4db6.png">
+<img width="650" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/234679015-b1daa50f-94a8-4ef2-b3f5-3157b7a3733b.png">
 
 --------
 
@@ -10,7 +10,7 @@
 
 --------
 
-<img width="650" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/232536483-9236c513-c5ba-4444-8faa-e8ea64eb5ce2.png">
+<img width="650" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/234669562-30dae4ad-1207-47e4-8327-fbd5662c8b9c.png">
 
 
 ## Installation & Usage:
@@ -57,9 +57,9 @@ Here's how to customize **``pdbp``**/``pdb`` options if you don't like the defau
 ```python
 import pdb
 if hasattr(pdb, "DefaultConfig"):
-    pdb.DefaultConfig.filename_color = pdb.Color.blue
+    pdb.DefaultConfig.filename_color = pdb.Color.fuchsia
     pdb.DefaultConfig.line_number_color = pdb.Color.turquoise
-    pdb.DefaultConfig.truncate_long_lines = True
+    pdb.DefaultConfig.truncate_long_lines = False
     pdb.DefaultConfig.sticky_by_default = True
 ```
 

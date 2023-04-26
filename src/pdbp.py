@@ -6,6 +6,7 @@ from __future__ import print_function
 import code
 import codecs
 import inspect
+import math
 import os.path
 import pprint
 import re
@@ -71,7 +72,7 @@ def get_width(line):
     return line_length
 
 
-def set_line_width(line, width):
+def set_line_width(line, width, tll=True):
     """Trim line if too long. Fill line if too short. Return line."""
     line_width = get_width(line)
     new_line = ""
@@ -88,7 +89,9 @@ def set_line_width(line, width):
             if get_width(updated_line) > width:
                 break
             new_line = updated_line
-    extra_spaces = " " * (width - get_width(new_line))
+    extra_spaces = ""
+    if tll:
+        extra_spaces = " " * (width - get_width(new_line))
     return "%s%s" % (new_line, extra_spaces)
 
 
@@ -103,7 +106,7 @@ class DefaultConfig(object):
     editor = "${EDITOR:-vi}"  # Use $EDITOR if set; else default to vi.
     stdin_paste = None
     exec_if_unfocused = None  # This option was removed!
-    truncate_long_lines = True
+    truncate_long_lines = False
     disable_pytest_capturing = True
     enable_hidden_frames = False
     show_hidden_frames_count = False
@@ -463,6 +466,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             match = self.stack_entry_regexp.match(entry)
             if match:
                 filename, lineno, other = match.groups()
+                other = self.format_source(other.rstrip()).rstrip()
                 filename = Color.set(self.config.filename_color, filename)
                 lineno = Color.set(self.config.line_number_color, lineno)
                 entry = "%s(%s)%s" % (filename, lineno, other)
@@ -623,8 +627,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 self.print_current_stack_entry()
             except ValueError as e:
                 self.error('Jump failed: %s' % e)
+    do_j = do_jump
 
-    def _printlonglist(self, linerange=None, fnln=None):
+    def _printlonglist(self, linerange=None, fnln=None, nc_fnln=""):
         try:
             if self.curframe.f_code.co_name == "<module>":
                 lines, _ = inspect.findsource(self.curframe)
@@ -655,9 +660,11 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             end = min(end, lineno + len(lines))
             lines = lines[start - lineno:end - lineno]
             lineno = start
-        self._print_lines_pdbp(lines, lineno, fnln=fnln)
+        self._print_lines_pdbp(lines, lineno, fnln=fnln, nc_fnln=nc_fnln)
 
-    def _print_lines_pdbp(self, lines, lineno, print_markers=True, fnln=None):
+    def _print_lines_pdbp(
+        self, lines, lineno, print_markers=True, fnln=None, nc_fnln=""
+    ):
         dots = "..."
         offset = 0
         try:
@@ -685,12 +692,21 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if max_line > 99999:
             offset = 2
         exc_lineno = self.tb_lineno.get(self.curframe, None)
-        lines = [line[:-1] for line in lines]  # remove the trailing "\n"
         lines = [line.replace("\t", "    ")
                  for line in lines]  # force tabs to 4 spaces
+        lines = [line.rstrip() for line in lines]
         width, height = self.get_terminal_size()
         width = width - offset
         height = height - 1
+        overflow = 0
+        height_counter = height
+        if not self.config.truncate_long_lines:
+            for line in lines:
+                if len(line) > width - 9:
+                    overflow += 1
+                height_counter -= 1
+                if height_counter <= 0:
+                    break
         if self.config.truncate_long_lines:
             maxlength = max(width - 9, 16)
             lines = [set_line_width(line, maxlength) for line in lines]
@@ -699,7 +715,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if self.config.highlight:
             # Fill line with spaces. This is important when a bg color is
             # is used for highlighting the current line (via setbgcolor).
-            lines = [set_line_width(line, maxlength) for line in lines]
+            tll = self.config.truncate_long_lines
+            lines = [set_line_width(line, maxlength, tll) for line in lines]
             src = self.format_source("\n".join(lines))
             lines = src.splitlines()
         if height >= 6:
@@ -708,7 +725,10 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 exc_lineno if exc_lineno else 0
             ) - lineno
             if last_marker_line >= 0:
-                maxlines = last_marker_line + height * 2 // 3
+                more_overflow = int(len(nc_fnln) / width)
+                overflow = overflow + more_overflow
+                maxlines = last_marker_line + (height * 2 // 3)
+                maxlines = maxlines - math.ceil(overflow * 1 / 3)
                 if len(lines) > maxlines:
                     lines = lines[:maxlines]
                     lines.append(Color.set("39;49;1", "..."))
@@ -946,8 +966,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 self.curindex = 0
             colored_index = Color.set(self.config.stack_color, self.curindex)
             fnln = "[%s] > %s(%s)" % (colored_index, fname, lno)
+            nc_fnln = "[%s] > %s(%s)" % (self.curindex, filename, lineno)
             sticky_range = self.sticky_ranges.get(self.curframe, None)
-            self._printlonglist(sticky_range, fnln=fnln)
+            self._printlonglist(sticky_range, fnln=fnln, nc_fnln=nc_fnln)
             needs_extra_line = False
             if "__exception__" in frame.f_locals:
                 s = self._format_exc_for_sticky(
@@ -1033,8 +1054,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             print(file=self.stdout, end="\n\033[F")
 
     def do_truncate(self, arg):
-        # Toggle line truncation. Usage: "truncate".
-        # (The changes only appear in "sticky" mode.)
+        # Toggle line truncation. Usage: "truncate" / "trun".
+        # (Changes only appear when "sticky" mode is active.)
+        # When enabled, all lines take on the screen width.
         self.config.truncate_long_lines = not self.config.truncate_long_lines
         self.print_current_stack_entry()
     do_trun = do_truncate
@@ -1111,7 +1133,15 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         _, lineno, lines = self._get_position_of_arg(arg)
         if lineno is None:
             return
-        self._print_lines_pdbp(lines, lineno, print_markers=False)
+        try:
+            frame = self.curframe
+            filename = self.canonic(frame.f_code.co_filename)
+            nc_fnln = "[%s] > %s(%s)" % (self.curindex, filename, lineno)
+            self._print_lines_pdbp(
+                lines, lineno, print_markers=False, nc_fnln=nc_fnln
+            )
+        except Exception:
+            self._print_lines_pdbp(lines, lineno, print_markers=False)
 
     def do_frame(self, arg):
         try:
