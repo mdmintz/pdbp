@@ -13,7 +13,7 @@
 <img width="650" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/234669562-30dae4ad-1207-47e4-8327-fbd5662c8b9c.png">
 
 
-## Installation & Usage:
+## Installation:
 
 ```bash
 pip install pdbp
@@ -31,7 +31,25 @@ import pdbp
 import pdbp  # noqa
 ```
 
+--------
+
+Alternatively, you can make ``pdbp`` the default debugger by changing an environmental variable on Python 3.7 or newer:
+
+```bash
+PYTHONBREAKPOINT=pdbp.set_trace
+```
+
+## Usage:
+
 To trigger a breakpoint in your code with ``pytest``, add ``--trace`` (to start tests with a breakpoint) or ``--pdb`` (to trigger a breakpoint if a test fails).
+
+To trigger a breakpoint from a pure ``python`` run, use:
+
+```bash
+python -m pdbp <script.py>
+```
+
+--------
 
 Basic **``Pdb+``** console commands: ``n``, ``c``, ``s`` => ``next``, ``continue``, ``step``.
 
