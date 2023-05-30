@@ -31,9 +31,7 @@ import pdbp
 import pdbp  # noqa
 ```
 
---------
-
-Alternatively, you can make ``pdbp`` the default debugger by changing an environmental variable on Python 3.7 or newer:
+You can also make ``pdbp`` the default debugger by setting an environmental variable:
 
 ```bash
 PYTHONBREAKPOINT=pdbp.set_trace
