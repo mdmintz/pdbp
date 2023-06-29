@@ -980,7 +980,72 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                         and not self.config.exception_caught
                     ):
                         print(s, file=self.stdout)
-                    needs_extra_line = True
+                        needs_extra_line = True
+            elif "exc" in frame.f_locals and "msg" in frame.f_locals:
+                s = str(frame.f_locals["msg"]).strip()
+                e = str(frame.f_locals["exc"]).strip()
+                e = e.split("<class '")[-1].split("'>")[0] + ":"
+                if s and self.has_traceback:
+                    if self.config.highlight:
+                        the_return_color = self.__get_return_color(s)
+                        s = Color.set(the_return_color, s)
+                        e = Color.set(the_return_color, e)
+                    last_return_color = self.config.last_return_color
+                    lastline = None
+                    try:
+                        lastline = inspect.getsourcelines(self.curframe)[0][-1]
+                        lastline = str(lastline)
+                    except Exception:
+                        lastline = ""
+                    if (
+                        last_return_color == self.config.pm_return_value_color
+                        and not self.config.exception_caught
+                        and "raise " in lastline
+                        and "(msg" in lastline.replace(" ", "")
+                    ):
+                        print(e, file=self.stdout)
+                        print(" " + s, file=self.stdout)
+                        needs_extra_line = True
+            elif "msg" in frame.f_locals or "message" in frame.f_locals:
+                s = None
+                s2 = None
+                if "msg" in frame.f_locals:
+                    s = str(frame.f_locals["msg"]).strip()
+                if "message" in frame.f_locals:
+                    s2 = str(frame.f_locals["message"]).strip()
+                if (s or s2) and self.has_traceback:
+                    if self.config.highlight:
+                        if s:
+                            the_return_color = self.__get_return_color(s)
+                            s = Color.set(the_return_color, s)
+                        if s2:
+                            the_return_color_2 = self.__get_return_color(s2)
+                            s2 = Color.set(the_return_color_2, s2)
+                    last_return_color = self.config.last_return_color
+                    lastline = None
+                    try:
+                        lastline = inspect.getsourcelines(self.curframe)[0][-1]
+                        lastline = str(lastline)
+                    except Exception:
+                        lastline = ""
+                    if (
+                        last_return_color == self.config.pm_return_value_color
+                        and not self.config.exception_caught
+                        and "raise " in lastline
+                        and s
+                        and "(msg" in lastline.replace(" ", "")
+                    ):
+                        print(s, file=self.stdout)
+                        needs_extra_line = True
+                    elif (
+                        last_return_color == self.config.pm_return_value_color
+                        and not self.config.exception_caught
+                        and "raise " in lastline
+                        and s2
+                        and "(message" in lastline.replace(" ", "")
+                    ):
+                        print(s2, file=self.stdout)
+                        needs_extra_line = True
             if "__return__" in frame.f_locals:
                 rv = frame.f_locals["__return__"]
                 try:
@@ -1013,12 +1078,23 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         s = ""
         try:
             try:
-                s = exc_type.__name__
+                try:
+                    module = str(exc_type.__module__)
+                    module = module.split("<class '")[-1].split("'>")[0]
+                    if module != "builtins":
+                        s = module + "." + exc_type.__name__.strip()
+                    else:
+                        s = exc_type.__name__.strip()
+                except Exception:
+                    s = exc_type.__name__.strip()
             except AttributeError:
-                s = str(exc_type)
+                s = str(exc_type).strip()
             if exc_value is not None:
                 s += ": "
-                s += str(exc_value)
+                s2 = str(exc_value)
+                if s2.startswith("Message:") and s2.count("Message:") == 1:
+                    s2 = "\n " + s2.split("Message:")[-1].strip()
+                s += s2
         except KeyboardInterrupt:
             raise
         except Exception as exc:
