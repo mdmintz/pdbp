@@ -710,7 +710,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             maxlength = max(width - 9, 16)
             lines = [set_line_width(line, maxlength) for line in lines]
         else:
-            maxlength = max(map(len, lines))
+            maxlength = max(map(get_width, lines))
         if self.config.highlight:
             # Fill line with spaces. This is important when a bg color is
             # is used for highlighting the current line (via setbgcolor).
