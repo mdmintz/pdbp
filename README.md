@@ -1,6 +1,6 @@
 # pdbp (Pdb+) [![](https://img.shields.io/pypi/v/pdbp.svg)](https://pypi.python.org/pypi/pdbp)
 
-<img width="660" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/247826485-d782911e-d817-4ea6-86dd-215991d7b8ea.png">
+<img width="680" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/247826485-d782911e-d817-4ea6-86dd-215991d7b8ea.png">
 
 --------
 
@@ -49,9 +49,8 @@ python -m pdbp <script.py>
 
 --------
 
-Basic **``Pdb+``** console commands: ``n``, ``c``, ``s`` => ``next``, ``continue``, ``step``.
-
-Use the ``u`` and ``d`` keys to travel ``up`` and ``down`` the stack!
+Basic **``Pdb+``** console commands:
+``n``, ``c``, ``s``, ``u``, ``d`` => ``next``, ``continue``, ``step``, ``up``, ``down``
 
 (To learn more **Pdb+** console commands, type ``help`` in the **Pdb+** console and press ``Enter/Return``.)
 
@@ -114,6 +113,12 @@ The default mode (``sticky``) lets you see a lot more lines of code from the deb
 > **Non-Sticky Mode:**
 
 <img width="600" alt="Pdb+ Non-Sticky Mode" src="https://user-images.githubusercontent.com/6788579/204890164-8465bc22-0f20-43f1-8ab7-b4316718a4c6.png">
+
+--------
+
+### Tab completion:
+
+<img width="584" alt="Pdb+ Tab Completion" src="https://user-images.githubusercontent.com/6788579/254074593-31fcd816-7a3f-445d-82e9-fc2c8d4d873c.png">
 
 --------
 
