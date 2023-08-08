@@ -32,7 +32,7 @@ if sys.argv[-1] == "publish":
             print("\nERROR! Publishing to PyPI requires Python>=3.9")
             sys.exit()
         print("\n*** Checking code health with flake8:\n")
-        os.system("python -m pip install 'flake8==6.0.0'")
+        os.system("python -m pip install 'flake8==6.1.0'")
         flake8_status = os.system("flake8 --exclude=.eggs,temp")
         if flake8_status != 0:
             print("\nERROR! Fix flake8 issues before publishing to PyPI!\n")
@@ -71,7 +71,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.4.3",
+    version="1.4.4",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -109,6 +109,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Scientific/Engineering",
@@ -122,7 +123,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         'pygments>=2.14.0;python_version<"3.7"',
-        'pygments>=2.15.1;python_version>="3.7"',
+        'pygments>=2.16.1;python_version>="3.7"',
         "tabcompleter>=1.2.1",
     ],
     setup_requires=[],
