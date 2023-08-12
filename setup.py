@@ -71,7 +71,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.4.4",
+    version="1.4.5",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -125,6 +125,7 @@ setup(
         'pygments>=2.14.0;python_version<"3.7"',
         'pygments>=2.16.1;python_version>="3.7"',
         "tabcompleter>=1.2.1",
+        'colorama>=0.4.5;platform_system=="Windows"',
     ],
     setup_requires=[],
     include_package_data=True,
