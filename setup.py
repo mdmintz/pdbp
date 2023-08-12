@@ -125,6 +125,7 @@ setup(
         'pygments>=2.14.0;python_version<"3.7"',
         'pygments>=2.16.1;python_version>="3.7"',
         "tabcompleter>=1.2.1",
+        'colorama>=0.4.5;platform_system=="Windows"',
     ],
     setup_requires=[],
     include_package_data=True,
