@@ -95,6 +95,9 @@ def set_line_width(line, width, tll=True):
 
 
 class DefaultConfig(object):
+    if "win32" in sys.platform:
+        import colorama
+        colorama.init()
     prompt = "(Pdb+) "
     highlight = True
     sticky_by_default = True
@@ -1571,9 +1574,6 @@ def print_pdb_continue_line():
 
 def main():
     import getopt
-    if "win32" in sys.platform:
-        import colorama
-        colorama.init()
     opts, args = getopt.getopt(sys.argv[1:], "mhc:", ["help", "command="])
     if not args:
         print(_usage)
