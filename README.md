@@ -1,17 +1,12 @@
 # pdbp (Pdb+) [![](https://img.shields.io/pypi/v/pdbp.svg)](https://pypi.python.org/pypi/pdbp)
 
-<img width="680" alt="Pdb+ Advanced Python Console Debugger" src="https://user-images.githubusercontent.com/6788579/247826485-d782911e-d817-4ea6-86dd-215991d7b8ea.png">
-
---------
+<img width="680" alt="Pdb+ Advanced Python Console Debugger" src="https://github.com/mdmintz/pdbp/assets/6788579/221038fd-df12-465e-958d-88eb9436a92d"><br />
 
 **[pdbp (Pdb+)](https://github.com/mdmintz/pdbp)** is an advanced console debugger for Python. It can be used as a drop-in replacement for [pdb](https://docs.python.org/3/library/pdb.html) and [pdbpp](https://github.com/pdbpp/pdbpp).
 
 <p><b>pdbp (Pdb+)</b> makes Python debugging a lot easier (and more fun!)</p>
 
 --------
-
-<img width="650" alt="Pdb+" src="https://user-images.githubusercontent.com/6788579/234679015-b1daa50f-94a8-4ef2-b3f5-3157b7a3733b.png">
-
 
 ## Installation:
 
