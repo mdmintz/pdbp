@@ -109,6 +109,7 @@ class DefaultConfig(object):
     stdin_paste = None
     exec_if_unfocused = None  # This option was removed!
     truncate_long_lines = False
+    shorten_path = True
     disable_pytest_capturing = True
     enable_hidden_frames = False
     show_hidden_frames_count = False
@@ -962,7 +963,19 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             frame, lineno = self.stack[self.curindex]
             filename = self.canonic(frame.f_code.co_filename)
             lno = Color.set(self.config.line_number_color, "%r" % lineno)
-            fname = Color.set(self.config.filename_color, filename)
+            short_filename = filename
+            if self.config.shorten_path:
+                try:
+                    home_dir = os.path.expanduser("~")
+                    if (
+                        len(home_dir) > 4
+                        and filename.startswith(home_dir)
+                        and filename.count(home_dir) == 1
+                    ):
+                        short_filename = filename.replace(home_dir, "~")
+                except Exception:
+                    pass
+            fname = Color.set(self.config.filename_color, short_filename)
             fnln = None
             if not self.curindex:
                 self.curindex = 0
