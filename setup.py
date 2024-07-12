@@ -123,7 +123,7 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         "pygments>=2.17.2",
-        "tabcompleter>=1.3.1",
+        "tabcompleter>=1.3.3",
         'colorama>=0.4.6;platform_system=="Windows"',
     ],
     setup_requires=[],
