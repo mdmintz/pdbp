@@ -13,6 +13,7 @@ import signal
 import sys
 import traceback
 import types
+import pdb
 from collections import OrderedDict
 from inspect import signature
 from io import StringIO
@@ -25,20 +26,6 @@ run_from_main = False
 
 # Digits, Letters, [], or Dots
 side_effects_free = re.compile(r"^ *[_0-9a-zA-Z\[\].]* *$")
-
-
-def import_from_stdlib(name):
-    result = types.ModuleType(name)
-    stdlibdir, _ = os.path.split(code.__file__)
-    pyfile = os.path.join(stdlibdir, name + ".py")
-    with open(pyfile) as f:
-        src = f.read()
-    co_module = compile(src, pyfile, "exec", dont_inherit=True)
-    exec(co_module, result.__dict__)
-    return result
-
-
-pdb = import_from_stdlib("pdb")
 
 
 def rebind_globals(func, newglobals):
@@ -1540,29 +1527,26 @@ def break_on_setattr(attrname, condition=always, Pdb=Pdb):
     return decorator
 
 
-if sys.version_info[0] >= 3:
-    import pdb
-    pdb.Pdb = Pdb
-    pdb.Color = Color
-    pdb.DefaultConfig = DefaultConfig
-    pdb.OrderedDict = OrderedDict
-    pdb.Completer = Completer
-    pdb.CLEARSCREEN = CLEARSCREEN
-    pdb.GLOBAL_PDB = GLOBAL_PDB
-    pdb.import_from_stdlib = import_from_stdlib
-    pdb.ConfigurableClass = ConfigurableClass
-    pdb.side_effects_free = side_effects_free
-    pdb.rebind_globals = rebind_globals
-    pdb.lasti2lineno = lasti2lineno
-    pdb.tabcompleter = tabcompleter
-    pdb.post_mortem = post_mortem
-    pdb.set_tracex = set_tracex
-    pdb.setbgcolor = setbgcolor
-    pdb.set_trace = set_trace
-    pdb.signature = signature
-    pdb.Undefined = Undefined
-    pdb.cleanup = cleanup
-    pdb.xpm = xpm
+pdb.Pdb = Pdb
+pdb.Color = Color
+pdb.DefaultConfig = DefaultConfig
+pdb.OrderedDict = OrderedDict
+pdb.Completer = Completer
+pdb.CLEARSCREEN = CLEARSCREEN
+pdb.GLOBAL_PDB = GLOBAL_PDB
+pdb.ConfigurableClass = ConfigurableClass
+pdb.side_effects_free = side_effects_free
+pdb.rebind_globals = rebind_globals
+pdb.lasti2lineno = lasti2lineno
+pdb.tabcompleter = tabcompleter
+pdb.post_mortem = post_mortem
+pdb.set_tracex = set_tracex
+pdb.setbgcolor = setbgcolor
+pdb.set_trace = set_trace
+pdb.signature = signature
+pdb.Undefined = Undefined
+pdb.cleanup = cleanup
+pdb.xpm = xpm
 
 
 def print_pdb_continue_line():
