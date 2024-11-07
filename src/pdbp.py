@@ -6,14 +6,14 @@ import code
 import codecs
 import inspect
 import math
-import os.path
+import os
 import pprint
 import re
+import shutil
 import signal
 import sys
 import traceback
 import types
-import pdb
 from collections import OrderedDict
 from inspect import signature
 from io import StringIO
@@ -26,6 +26,20 @@ run_from_main = False
 
 # Digits, Letters, [], or Dots
 side_effects_free = re.compile(r"^ *[_0-9a-zA-Z\[\].]* *$")
+
+
+def import_from_stdlib(name):
+    result = types.ModuleType(name)
+    stdlibdir, _ = os.path.split(code.__file__)
+    pyfile = os.path.join(stdlibdir, name + ".py")
+    with open(pyfile) as f:
+        src = f.read()
+    co_module = compile(src, pyfile, "exec", dont_inherit=True)
+    exec(co_module, result.__dict__)
+    return result
+
+
+pdb = import_from_stdlib("pdb")
 
 
 def rebind_globals(func, newglobals):
@@ -81,10 +95,16 @@ def set_line_width(line, width, tll=True):
     return "%s%s" % (new_line, extra_spaces)
 
 
+def get_terminal_size():
+    if "linux" in sys.platform:
+        return shutil.get_terminal_size()
+    return os.get_terminal_size()
+
+
 class DefaultConfig(object):
     if "win32" in sys.platform:
         import colorama
-        colorama.init()
+        colorama.just_fix_windows_console()
     prompt = "(Pdb+) "
     highlight = True
     sticky_by_default = True
@@ -408,10 +428,11 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             self._completions = self._get_all_completions(
                 completer.complete, text
             )
-            real_pdb = super()
-            for x in self._get_all_completions(real_pdb.complete, text):
-                if x not in self._completions:
-                    self._completions.append(x)
+            if not self._completions:
+                real_pdb = super()
+                for x in self._get_all_completions(real_pdb.complete, text):
+                    if x not in self._completions:
+                        self._completions.append(x)
             if GLOBAL_PDB:
                 del GLOBAL_PDB._pdbp_completing
             # Remove "\t" from tabcompleter if there are pdb completions.
@@ -685,7 +706,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         lines = [line.replace("\t", "    ")
                  for line in lines]  # force tabs to 4 spaces
         lines = [line.rstrip() for line in lines]
-        width, height = self.get_terminal_size()
+        width, height = get_terminal_size()
         width = width - offset
         height = height - 1
         overflow = 0
@@ -823,7 +844,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     do_p.__doc__ = pdb.Pdb.do_p.__doc__
 
     def do_pp(self, arg):
-        width, _ = self.get_terminal_size()
+        width, _ = get_terminal_size()
         try:
             pprint.pprint(self._getval(arg), self.stdout, width=width)
         except Exception:
@@ -1292,30 +1313,6 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
     do_w = do_where
     do_bt = do_where
 
-    @staticmethod
-    def get_terminal_size():
-        fallback = (80, 24)
-        try:
-            from shutil import get_terminal_size
-        except ImportError:
-            try:
-                import termios
-                import fcntl
-                import struct
-                call = fcntl.ioctl(0, termios.TIOCGWINSZ, "\x00" * 8)
-                height, width = struct.unpack("hhhh", call)[:2]
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except Exception:
-                width = int(os.environ.get("COLUMNS", fallback[0]))
-                height = int(os.environ.get("COLUMNS", fallback[1]))
-            width = width if width != 0 else fallback[0]
-            height = height if height != 0 else fallback[1]
-            return width, height
-        else:
-            width, height = get_terminal_size(fallback)  # shutil
-            return width, height
-
     def _open_editor(self, editor, lineno, filename):
         filename = filename.replace('"', '\\"')
         os.system('%s "%s"' % (editor, filename))
@@ -1363,11 +1360,6 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if module_name is None:
             return False
         return super().is_skipped_module(module_name)
-
-    if not hasattr(pdb.Pdb, "message"):  # For py27.
-
-        def message(self, msg):
-            print(msg, file=self.stdout)
 
     def error(self, msg):
         """Override/enhance default error method to display tracebacks."""
@@ -1527,6 +1519,7 @@ def break_on_setattr(attrname, condition=always, Pdb=Pdb):
     return decorator
 
 
+import pdb  # noqa
 pdb.Pdb = Pdb
 pdb.Color = Color
 pdb.DefaultConfig = DefaultConfig
@@ -1550,8 +1543,7 @@ pdb.xpm = xpm
 
 
 def print_pdb_continue_line():
-    from pdb import Pdb
-    width, height = Pdb.get_terminal_size()
+    width, height = get_terminal_size()
     pdb_continue = " PDB continue "
     border_line = ">>>>>>>>%s>>>>>>>>" % pdb_continue
     try:
