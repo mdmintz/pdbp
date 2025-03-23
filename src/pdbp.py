@@ -97,8 +97,11 @@ def set_line_width(line, width, tll=True):
 
 def get_terminal_size():
     if "linux" in sys.platform:
-        return shutil.get_terminal_size()
-    return os.get_terminal_size()
+        return shutil.get_terminal_size((80, 20))
+    try:
+        return os.get_terminal_size()
+    except Exception:
+        return shutil.get_terminal_size((80, 20))
 
 
 class DefaultConfig(object):
