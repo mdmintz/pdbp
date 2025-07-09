@@ -292,7 +292,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 pass
             else:
                 pdb.Pdb._previous_sigint_handler = None
-        ret = self.setup(frame, traceback)
+        ret = None
+        if not isinstance(traceback, BaseException):
+            ret = self.setup(frame, traceback)
         if ret:
             self.forget()
             return
@@ -324,6 +326,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 print(file=self.stdout, end="\n\033[F")
         completer = tabcompleter.setup()
         completer.config.readline.set_completer(self.complete)
+        if isinstance(traceback, BaseException):
+            return super().interaction(frame, traceback)
         self.config.before_interaction_hook(self)
         # Use _cmdloop on Python3, which catches KeyboardInterrupt.
         if hasattr(self, "_cmdloop"):
