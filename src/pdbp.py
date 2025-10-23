@@ -1167,10 +1167,18 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         self.print_current_stack_entry()
     do_trun = do_truncate
 
-    def print_stack_trace(self):
+    def print_stack_trace(self, count=None):
+        if count is None:
+            stack_to_print = self.stack
+        elif count == 0:
+            stack_to_print = [self.stack[self.curindex]]
+        elif count < 0:
+            stack_to_print = self.stack[:-count]
+        else:
+            stack_to_print = self.stack[-count:]
         try:
-            for frame_index, frame_lineno in enumerate(self.stack):
-                self.print_stack_entry(frame_lineno, frame_index=frame_index)
+            for frame_lineno in stack_to_print:
+                self.print_stack_entry(frame_lineno)
         except KeyboardInterrupt:
             pass
 
@@ -1263,7 +1271,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             self.curindex = arg
             self.curframe = self.stack[self.curindex][0]
-            self.curframe_locals = self.curframe.f_locals
+            if sys.version_info < (3, 14):
+                self.curframe_locals = self.curframe.f_locals
             self.print_current_stack_entry()
             self.lineno = None
     do_f = do_frame
@@ -1284,7 +1293,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             self.curindex = self.curindex - arg
             self.curframe = self.stack[self.curindex][0]
-            self.curframe_locals = self.curframe.f_locals
+            if sys.version_info < (3, 14):
+                self.curframe_locals = self.curframe.f_locals
             self.print_current_stack_entry()
             self.lineno = None
     do_up.__doc__ = pdb.Pdb.do_up.__doc__
@@ -1306,7 +1316,8 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             self.curindex = self.curindex + arg
             self.curframe = self.stack[self.curindex][0]
-            self.curframe_locals = self.curframe.f_locals
+            if sys.version_info < (3, 14):
+                self.curframe_locals = self.curframe.f_locals
             self.print_current_stack_entry()
             self.lineno = None
     do_down.__doc__ = pdb.Pdb.do_down.__doc__
