@@ -870,6 +870,26 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 return
     do_pp.__doc__ = pdb.Pdb.do_pp.__doc__
 
+    def enter_recursive_debugger(self, arg):
+        """
+        Enter a recursive debugger that steps through the code argument
+        (which is an arbitrary expression or statement to be
+        executed in the current environment).
+        """
+        sys.settrace(None)
+        globals = self.curframe.f_globals
+        locals = self.curframe_locals
+        p = Pdb(self.completekey, self.stdin, self.stdout)
+        p.prompt = "(%s) " % self.prompt.strip()
+        self.message("ENTERING RECURSIVE DEBUGGER")
+        try:
+            sys.call_tracing(p.run, (arg, globals, locals))
+        except Exception:
+            self._error_exc()
+        self.message("LEAVING RECURSIVE DEBUGGER")
+        sys.settrace(self.trace_dispatch)
+        self.lastcmd = p.lastcmd
+
     def do_debug(self, arg):
         self.last_cmd = self.lastcmd = "debug"
         Config = self.ConfigFactory
@@ -879,7 +899,9 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
                 kwargs.setdefault("Config", Config)
                 super(PdbpWithConfig, self_withcfg).__init__(*args, **kwargs)
                 self_withcfg.use_rawinput = self.use_rawinput
-        do_debug_func = pdb.Pdb.do_debug
+        do_debug_func = self.enter_recursive_debugger
+        if sys.version_info < (3, 14):
+            do_debug_func = super().do_debug
         newglobals = do_debug_func.__globals__.copy()
         newglobals["Pdb"] = PdbpWithConfig
         orig_do_debug = rebind_globals(do_debug_func, newglobals)
