@@ -1199,13 +1199,19 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         else:
             stack_to_print = self.stack[-count:]
         try:
-            for frame_lineno in stack_to_print:
-                self.print_stack_entry(frame_lineno)
+            for frame_index, frame_lineno in enumerate(stack_to_print):
+                self.print_stack_entry(
+                    frame_lineno,
+                    frame_index=frame_index,
+                )
         except KeyboardInterrupt:
             pass
 
     def print_stack_entry(
-        self, frame_lineno, prompt_prefix=pdb.line_prefix, frame_index=None
+        self,
+        frame_lineno,
+        prompt_prefix=pdb.line_prefix,
+        frame_index=None,
     ):
         if self.sticky:
             return
