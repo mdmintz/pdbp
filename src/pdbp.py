@@ -563,7 +563,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         if not arg:
             print('Inspect Usage: "inspect <VAR>"', file=self.stdout)
             print(
-                "Local variables: %r" % self.curframe_locals.keys(),
+                "Local variables: %r" % self.curframe.f_locals.keys(),
                 file=self.stdout,
             )
             return
@@ -838,7 +838,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             if not arg:
                 print('Print usage: "p <VAR>"', file=self.stdout)
                 print(
-                    "Local variables: %r" % self.curframe_locals.keys(),
+                    "Local variables: %r" % self.curframe.f_locals.keys(),
                     file=self.stdout,
                 )
                 return
@@ -858,7 +858,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
             if not arg:
                 print('PrettyPrint usage: "pp <VAR>"', file=self.stdout)
                 print(
-                    "Local variables: %r" % self.curframe_locals.keys(),
+                    "Local variables: %r" % self.curframe.f_locals.keys(),
                     file=self.stdout,
                 )
                 return
@@ -878,7 +878,7 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         """
         sys.settrace(None)
         globals = self.curframe.f_globals
-        locals = self.curframe_locals
+        locals = self.curframe.f_locals
         p = Pdb(self.completekey, self.stdin, self.stdout)
         p.prompt = "(%s) " % self.prompt.strip()
         self.message("ENTERING RECURSIVE DEBUGGER")
