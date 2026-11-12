@@ -28,11 +28,11 @@ if sys.argv[-1] == "publish":
     confirm_text = ">>> Confirm release PUBLISH to PyPI? (yes/no): "
     reply = str(input_method(confirm_text)).lower().strip()
     if reply == "yes":
-        if sys.version_info < (3, 9):
-            print("\nERROR! Publishing to PyPI requires Python>=3.9")
+        if sys.version_info < (3, 10):
+            print("\nERROR! Publishing to PyPI requires Python>=3.10")
             sys.exit()
         print("\n*** Checking code health with flake8:\n")
-        os.system("python -m pip install 'flake8==7.3.0'")
+        os.system("python -m pip install 'flake8==7.5.0'")
         flake8_status = os.system("flake8 --exclude=.eggs,temp")
         if flake8_status != 0:
             print("\nERROR! Fix flake8 issues before publishing to PyPI!\n")
@@ -71,7 +71,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pdbp",
-    version="1.8.3",
+    version="1.9.0",
     description="pdbp (Pdb+): A drop-in replacement for pdb and pdbpp.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -109,6 +109,7 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
+        "Programming Language :: Python :: 3.15",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Scientific/Engineering",

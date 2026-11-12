@@ -207,6 +207,10 @@ class Pdb(pdb.Pdb, ConfigurableClass, object):
         kwargs.update(**kwds)
         super().__init__(*args, **kwargs)
         self.prompt = self.config.prompt
+        if hasattr(self, "pyrepl_input") and self.pyrepl_input:
+            self.pyrepl_input.prompt = (
+                self.pyrepl_input.prompt.replace("Pdb", "Pdb+")
+            )
         self.display_list = {}  # frame --> (name --> last seen value)
         self.sticky = self.config.sticky_by_default
         self.first_time_sticky = self.sticky
